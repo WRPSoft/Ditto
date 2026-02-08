@@ -95,14 +95,7 @@ void CImageViewer::UpdateBitmapSize(bool setScale)
 				}
 
 				 // RW: 2026-02-08 18:19:53 added height calculation, so that image will fit to image viewer window size
-  				 // former code
-				 /* double w = m_pGdiplusBitmap->GetWidth();
-				 if (w > 0)
-				 {
-					      m_scale = rect.Width() / w;
-				 }*/
-				// new code
-				double w = m_pGdiplusBitmap->GetWidth();
+  				double w = m_pGdiplusBitmap->GetWidth();
 				double h = m_pGdiplusBitmap->GetHeight();
 				if (w > 0)
 				{

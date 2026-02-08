@@ -94,10 +94,31 @@ void CImageViewer::UpdateBitmapSize(bool setScale)
 					rect.bottom += cySB;
 				}
 
+				 // RW: 2026-02-08 18:19:53 added height calculation, so that image will fit to image viewer window size
+  				 // former code
+				 /* double w = m_pGdiplusBitmap->GetWidth();
+				 if (w > 0)
+				 {
+					      m_scale = rect.Width() / w;
+				 }*/
+				// new code
 				double w = m_pGdiplusBitmap->GetWidth();
+				double h = m_pGdiplusBitmap->GetHeight();
 				if (w > 0)
 				{
 					m_scale = rect.Width() / w;
+					// if (!CGetSetOptions::GetSizeDescWindowToContent()) {
+					int nH = static_cast<int>(rect.Height() * (1 / m_scale));
+					if (h > nH) {
+						int loop = 0; // safeguard
+						while (h > nH && loop < 250) {
+							m_scale -= .02;
+							nH = static_cast<int>(rect.Height() * (1 / m_scale));
+							loop++;
+						}
+						m_scale = max(m_scale, 0.01);
+					}			
+					//}
 				}
 			}
 			else

@@ -52,6 +52,13 @@ bool ChaiScriptOnCopy::ProcessScript(CDittoChaiScript &clipData, std::string scr
 		chai.add(chaiscript::fun(&CDittoChaiScript::DescriptionMatchesRegex), "DescriptionMatchesRegex");
 		chai.add(chaiscript::fun(&CDittoChaiScript::DescriptionReplaceRegex), "DescriptionReplaceRegex");
 
+		// RW: 2026-01-28 17:06:27 added ChaiScript caller for external apps via ShellExecute command
+		chai.add(chaiscript::fun(&CDittoChaiScript::CallExternal), "CallExternal");
+		// RW: 2026-01-28 17:06:27 added ChaiScript for easier getting file extension
+		chai.add(chaiscript::fun(&CDittoChaiScript::GetFileExtension), "GetFileExtension");
+		// RW: 2026-02-03 15:09:42 copied picture files can be normally edited
+		chai.add(chaiscript::fun(&CDittoChaiScript::GetPictureFileName), "GetPictureFileName");
+
 		chai.add(chaiscript::fun(&FormatCurrentTime), "FormatCurrentTime");
 
 		chai.add(chaiscript::var(&clipData), "clip");

@@ -104,7 +104,7 @@ void CImageViewer::UpdateBitmapSize(bool setScale)
 					int nH = static_cast<int>(rect.Height() * (1 / m_scale));
 					if (h > nH) {
 						int loop = 0; // safeguard
-						while (h > nH && loop < 250) {
+						while (h > nH && loop < 100) {
 							m_scale -= .02;
 							nH = static_cast<int>(rect.Height() * (1 / m_scale));
 							loop++;

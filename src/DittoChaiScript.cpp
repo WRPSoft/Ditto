@@ -251,3 +251,77 @@ void CDittoChaiScript::DescriptionReplaceRegex(std::string regex, std::string re
 		m_pClip->Description(CTextConvert::Utf8ToUnicode(newAscii.c_str()).GetBuffer());
 	}
 }
+
+// RW: 2026-01-28 17:06:27 added ChaiScript caller for external apps via ShellExecute command
+void CDittoChaiScript::CallExternal(std::string command, std::string params, bool dobeep, bool debugmode)
+{
+	if (dobeep) 
+		// Beep(523, 150);
+		MessageBeep(0xFFFFFFFF);
+
+	if (m_pClip && !command.empty())
+	{
+		// Debugmodus -> only show messagebox with assigned parameters
+		if (debugmode)
+			MessageBoxA(NULL, params.c_str(), command.c_str(), MB_ICONASTERISK | MB_OK);
+		else {
+			if (params.empty())
+				ShellExecuteA(NULL, "open", command.c_str(), NULL, NULL, SW_SHOWNORMAL);
+			else
+				ShellExecuteA(NULL, "open", command.c_str(), params.c_str(), NULL, SW_SHOWNORMAL);
+		}
+	}
+}
+
+// RW: 2026-02-03 15:09:42 Copied image files can be edited with an image editing application if we pass the path to the image file.
+std::string CDittoChaiScript::GetPictureFileName()
+{
+	if (m_pClip) {
+		IClipFormat* pFormat = m_pClip->Clips()->FindFormatEx(CF_HDROP);
+		if (pFormat)
+		{
+			// RW: code borrowed from CPasteImageAsHtmlImage::ConvertPathToHtmlImageTag (CPasteImageAsHtmlImage.cpp)
+			HDROP drop = static_cast<HDROP>(GlobalLock(static_cast<HDROP>(pFormat->Data())));
+			const int nNumFiles = DragQueryFile(drop, -1, NULL, 0);
+			TCHAR file[MAX_PATH];
+			for (int nFile = 0; nFile < nNumFiles; nFile++)
+			{
+				if (DragQueryFile(drop, nFile, file, sizeof(file)) > 0)
+				{
+					CString oFile(file);
+					CString csFile(file);
+					csFile = csFile.MakeLower();
+					// MessageBoxW(NULL, csOrigfile, _T("FN:"), MB_ICONASTERISK | MB_OK);
+					if (csFile.Find(_T(".bmp")) != -1 ||
+						csFile.Find(_T(".dib")) != -1 ||
+						csFile.Find(_T(".jpg")) != -1 ||
+						csFile.Find(_T(".jpeg")) != -1 ||
+						csFile.Find(_T(".jpe")) != -1 ||
+						csFile.Find(_T(".jfif")) != -1 ||
+						csFile.Find(_T(".gif")) != -1 ||
+						csFile.Find(_T(".tif")) != -1 ||
+						csFile.Find(_T(".tiff")) != -1 ||
+						csFile.Find(_T(".png")) != -1)
+					{
+						return CTextConvert::UnicodeToAnsi(oFile);
+					}
+				}
+			}
+		}
+	}
+	return "";
+}
+
+// RW: 2026-01-28 17:06:27 added ChaiScript for easier getting file extension
+std::string CDittoChaiScript::GetFileExtension(const std::string FileName)
+{
+	if (m_pClip) {
+		if (FileName.find_last_of(".") != std::string::npos) {
+			std::string stres = FileName.substr(FileName.find_last_of("."));
+			// std::transform(stres.begin(), stres.end(), stres.begin(), [](unsigned char c) { return std::tolower(c); });
+			std::transform(stres.begin(), stres.end(), stres.begin(), ::tolower);
+			return stres;
+		}
+	}
+	return "";
+}

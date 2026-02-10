@@ -99,19 +99,26 @@ void CImageViewer::UpdateBitmapSize(bool setScale)
 				double h = m_pGdiplusBitmap->GetHeight();
 				if (w > 0)
 				{
-					m_scale = rect.Width() / w;
-					// if (!CGetSetOptions::GetSizeDescWindowToContent()) {
-					int nH = static_cast<int>(rect.Height() * (1 / m_scale));
-					if (h > nH) {
-						int loop = 0; // safeguard
-						while (h > nH && loop < 100) {
-							m_scale -= .02;
-							nH = static_cast<int>(rect.Height() * (1 / m_scale));
-							loop++;
-						}
-						m_scale = max(m_scale, 0.01);
-					}			
+					// RW: faster and propably the better approach
+					// m_scale = rect.Width() / w;
+					//// if (!CGetSetOptions::GetSizeDescWindowToContent()) {
+					// int nH = static_cast<int>(rect.Height() * (1 / m_scale));
+					// if (h > nH) {
+					// 	int loop = 0; // safeguard
+					//	while (h > nH && loop < 150) {
+					//		m_scale -= .02;
+					//		nH = static_cast<int>(rect.Height() * (1 / m_scale));
+					//		loop++;
+					//	}
+					//	// normaly not needed, but it doesn't hurt
+					//	m_scale = max(m_scale, 0.01);
 					//}
+					//// }
+ 					double xscale = rect.Width() / w;
+					double yscale = rect.Height() / h;
+					m_scale = xscale < yscale ? xscale : yscale;
+					// normaly not needed, but it doesn't hurt
+					m_scale = max(m_scale, 0.01);
 				}
 			}
 			else

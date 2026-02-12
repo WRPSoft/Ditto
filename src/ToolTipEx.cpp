@@ -497,6 +497,21 @@ BOOL CToolTipEx::OnMsg(MSG *pMsg)
             {
                 WPARAM vk = pMsg->wParam;
 
+				// RW: 2026-02-12 10:41:14 added imageviewer scaling via keyboard (numpad keys: '-' = Unzoom, '+' = Zoom, '*' = Scaleimagestofitwindow)
+				if (::IsWindow(m_imageViewer.m_hWnd)) {
+					switch (vk) {
+					case VK_SUBTRACT: // '-'
+						m_imageViewer.DoScale(1, CPoint(-1, -1));
+						return TRUE;
+					case VK_ADD:  // '+'
+						m_imageViewer.DoScale(2, CPoint(-1, -1));
+						return TRUE;
+					case VK_MULTIPLY: // '*' fit image to window
+						m_imageViewer.DoScale(0, CPoint(-1, -1));
+						return TRUE;
+					}
+				}
+
 				if(vk == 'C')
 				{
 					if (GetKeyState(VK_CONTROL) & 0x8000)
@@ -509,6 +524,7 @@ BOOL CToolTipEx::OnMsg(MSG *pMsg)
 						}
 					}
 				}
+								
                 
                 if(vk == VK_TAB)
                 {

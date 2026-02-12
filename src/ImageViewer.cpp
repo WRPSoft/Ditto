@@ -94,19 +94,25 @@ void CImageViewer::UpdateBitmapSize(bool setScale)
 					rect.bottom += cySB;
 				}
 
-				 // RW: 2026-02-08 18:19:53 added height calculation, so that image will fit to image viewer window size
+				 // RW: 2026-02-08 18:19:53 added height calculation too, so that image will really fit to image viewer window size
   				double w = m_pGdiplusBitmap->GetWidth();
 				double h = m_pGdiplusBitmap->GetHeight();
 				if (w > 0 && h > 0)
 				{
-					// RW: faster and propably the better approach
+					// RW: scaling based on the lowest scale factors of witdh and height is faster and probably better than my first approach via while loop
+					double xscale = rect.Width() / w;
+					double yscale = rect.Height() / h;
+					m_scale = xscale < yscale ? xscale : yscale;
+					m_scale = max(m_scale, 0.01); // it doesn't hurt
+
+					// first approach
 					// m_scale = rect.Width() / w;
 					//// if (!CGetSetOptions::GetSizeDescWindowToContent()) {
 					// int nH = static_cast<int>(rect.Height() * (1 / m_scale));
 					// if (h > nH) {
 					// 	int loop = 0; // safeguard
 					//	while (h > nH && loop < 150) {
-					//		m_scale -= .02;
+					//		m_scale -= .01;
 					//		nH = static_cast<int>(rect.Height() * (1 / m_scale));
 					//		loop++;
 					//	}
@@ -114,11 +120,6 @@ void CImageViewer::UpdateBitmapSize(bool setScale)
 					//	m_scale = max(m_scale, 0.01);
 					//}
 					//// }
- 					double xscale = rect.Width() / w;
-					double yscale = rect.Height() / h;
-					m_scale = xscale < yscale ? xscale : yscale;
-					// normaly not needed, but it doesn't hurt
-					m_scale = max(m_scale, 0.01);
 				}
 			}
 			else
@@ -196,7 +197,7 @@ BOOL CImageViewer::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
 
 	if (nFlags == MK_CONTROL)
 	{
-		this->LockWindowUpdate();
+		/*this->LockWindowUpdate();
 		CPoint delta;
 		double oldScale = m_scale;
 
@@ -224,7 +225,10 @@ BOOL CImageViewer::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
 
 		this->Invalidate();
 
-		this->UnlockWindowUpdate();
+		this->UnlockWindowUpdate();*/
+
+		// RW: 2026-02-12 12:37:52 this new added method can be used here
+		DoScale(zDelta > 0 ? 2 : 1, pt);
 	}
 	else
 	{
@@ -470,4 +474,64 @@ LRESULT CImageViewer::OnGestureNotify(WPARAM wParam, LPARAM lParam)
 	);
 
 	return TRUE;
+}
+
+// RW: 2026-02-12 10:41:14 added imageviewer scaling via keyboard ('-' = Unzoom, '+' = Zoom, '*' = Scaleimagestofitwindow)
+// public dispatcher method for CToolTipEx::OnMsg(MSG *pMsg) handler in ToolTipEx.cpp
+void CImageViewer::DoScale(unsigned char amode, CPoint apt)
+{
+	// OutputDebugString(_T("scale image via keyboard inputs\r\n"));
+	// AfxMessageBox(std::to_wstring(mode).c_str());
+
+	this->LockWindowUpdate();
+	CPoint delta;
+	double const oldScale = m_scale;
+	bool isWheel = false;
+
+	CPoint pt;
+	// called via keyboard
+	if (apt.x == -1 && apt.y == -1) {
+		pt.x = m_scrollHelper.GetScrollPos().cx;
+		pt.y = m_scrollHelper.GetScrollPos().cy;
+	}	
+	// called via OnMouseWheel event
+	else { 
+		isWheel = true;
+		pt = apt;		
+	}
+
+	switch (amode) {
+	case 0:
+		m_scale = 1;
+		if (m_hoveringOverImage) {
+			CGetSetOptions::SetScaleImagesToDescWindow(true);
+		}
+		break;
+	case 1:
+		m_scale -= .1;
+		break;
+	case 2:
+		m_scale += .1;
+		break;
+	}
+
+	m_scale = max(m_scale, 0.01);
+
+	if (isWheel) // ony do this if called from onMouseWheel event
+		::ScreenToClient(m_hWnd, &pt);
+
+	UpdateBitmapSize(m_scale == 1 ? true : false);
+
+	if (oldScale > 0 && m_scale > 0)
+	{
+		delta.x = round((pt.x * (1 / oldScale)) - (pt.x * (1 / m_scale)));
+		delta.y = round((pt.y * (1 / oldScale)) - (pt.y * (1 / m_scale)));
+
+		m_scrollHelper.Update(delta);
+	}
+
+	this->Invalidate();
+
+	this->UnlockWindowUpdate();
+
 }

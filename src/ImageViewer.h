@@ -29,6 +29,9 @@ public:
 
 	double m_scale;
 
+	// RW: 2026-02-12 10:41:14 added imageviewer scaling via keyboard ('-' = Unzoom, '+' = Zoom, '*' = Scaleimagestofitwindow)
+	void DoScale(const unsigned char amode, const CPoint apt);
+
 protected:
 	DECLARE_MESSAGE_MAP()
 

@@ -36,10 +36,10 @@ public:
 	void DescriptionReplaceRegex(std::string regex, std::string replaceWith);
 
 	// RW: 2026-01-28 17:06:27 added ChaiScript caller for external apps via ShellExecuteA command
-	void CallExternal(std::string command, std::string params, bool dobeep, bool debugmode);
+	void CallExternal(const std::string command, const std::string params, const bool dobeep, const bool debugmode);
 	// RW: 2026-01-28 17:06:27 added ChaiScript for easier getting file extension
 	std::string CDittoChaiScript::GetFileExtension(const std::string FileName);
-	// RW: 2026-02-03 15:09:42 copied picture files can be normally edited
+	// RW: 2026-02-03 15:09:42 copied image files can be edited with an image editing application if we pass the path to the image file.
 	std::string CDittoChaiScript::GetPictureFileName();
 
 	void SetMakeTopSticky();

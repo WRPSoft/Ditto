@@ -251,4 +251,3 @@ void CDittoChaiScript::DescriptionReplaceRegex(std::string regex, std::string re
 		m_pClip->Description(CTextConvert::Utf8ToUnicode(newAscii.c_str()).GetBuffer());
 	}
 }
-

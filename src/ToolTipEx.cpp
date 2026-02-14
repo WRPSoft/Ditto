@@ -506,8 +506,13 @@ BOOL CToolTipEx::OnMsg(MSG *pMsg)
 					case VK_ADD:  // '+'
 						m_imageViewer.DoScale(2, CPoint(-1, -1));
 						return TRUE;
-					case VK_MULTIPLY: // '*' fit image to window
-						m_imageViewer.DoScale(0, CPoint(-1, -1));
+					case VK_MULTIPLY: // '*' fit image to window or size window to content
+						if (GetKeyState(VK_CONTROL) & 0x8000) {
+							OnSizewindowtocontent();
+						}
+						else {
+							m_imageViewer.DoScale(0, CPoint(-1, -1));
+						}
 						return TRUE;
 					}
 				}

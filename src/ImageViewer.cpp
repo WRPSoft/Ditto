@@ -105,9 +105,8 @@ void CImageViewer::UpdateBitmapSize(bool setScale)
 					m_scale = xscale < yscale ? xscale : yscale;
 					m_scale = max(m_scale, 0.01); // it doesn't hurt
 
-					// first approach
+					// first/another approach, but the ternary conditional operator seems to do the trick better
 					// m_scale = rect.Width() / w;
-					//// if (!CGetSetOptions::GetSizeDescWindowToContent()) {
 					// int nH = static_cast<int>(rect.Height() * (1 / m_scale));
 					// if (h > nH) {
 					// 	int loop = 0; // safeguard
@@ -116,10 +115,8 @@ void CImageViewer::UpdateBitmapSize(bool setScale)
 					//		nH = static_cast<int>(rect.Height() * (1 / m_scale));
 					//		loop++;
 					//	}
-					//	// normaly not needed, but it doesn't hurt
-					//	m_scale = max(m_scale, 0.01);
+					//	m_scale = max(m_scale, 0.01); // it doesn't hurt
 					//}
-					//// }
 				}
 			}
 			else

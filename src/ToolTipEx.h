@@ -10,6 +10,22 @@
 #include "SnapWindow.h"
 #include "SimpleBrowser.h"
 
+
+// RW: 2026-02-16 16:58:02 added temporary full size window mode
+struct fullsizeMode
+{
+	bool active = false; // 'full size' mode is temporary active
+	bool lastwfmode = false;  // state before entering full size mode
+	CRect rect; // origin window rect (before full size mode has been activated)
+
+	void clear() { 
+		active = false; 
+		lastwfmode = false; 
+		rect.SetRectEmpty(); 
+	}
+};
+
+
 class CToolTipEx : public CWnd
 {
 // Construction
@@ -106,6 +122,9 @@ protected:
 	bool m_showingRTF;
 	bool m_showingHTML;
 	bool m_showingImage;
+
+	// RW: 2026-02-16 16:58:02 added temporary full size window mode
+	fullsizeMode m_fullsizeMode;
 
 protected:
 	CString GetFieldFromString(CString ref, int nIndex, TCHAR ch);	

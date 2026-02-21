@@ -79,7 +79,9 @@ void CImageViewer::UpdateBitmapSize(bool setScale)
 	{
 		if (setScale)
 		{
-			BOOL newScaleImage = CGetSetOptions::GetScaleImagesToDescWindow();
+			// RW: 2026-02-16 08:24:41 Question: iIt might make sense to reset the scale factor when GetSizeDescWindowToContent is activated
+			BOOL const newScaleImage = CGetSetOptions::GetScaleImagesToDescWindow();
+			// BOOL newScaleImage = CGetSetOptions::GetScaleImagesToDescWindow() && !CGetSetOptions::GetSizeDescWindowToContent();
 			if (newScaleImage)
 			{
 				CRect rect;
@@ -88,35 +90,28 @@ void CImageViewer::UpdateBitmapSize(bool setScale)
 				SCROLLINFO si;
 				if (this->GetScrollInfo(SB_HORZ, &si) && si.nPage > 0)
 				{
-					int cxSB = ::GetSystemMetrics(SM_CXVSCROLL);
+					int const cxSB = ::GetSystemMetrics(SM_CXVSCROLL);
 					rect.right += cxSB;
-					int cySB = ::GetSystemMetrics(SM_CYHSCROLL);
+					int const cySB = ::GetSystemMetrics(SM_CYHSCROLL);
 					rect.bottom += cySB;
 				}
 
 				 // RW: 2026-02-08 18:19:53 added height calculation too, so that image will really fit to image viewer window size
-  				double w = m_pGdiplusBitmap->GetWidth();
-				double h = m_pGdiplusBitmap->GetHeight();
+  				double const w = m_pGdiplusBitmap->GetWidth();
+				double const h = m_pGdiplusBitmap->GetHeight();
 				if (w > 0 && h > 0)
 				{
 					// RW: scaling based on the lowest scale factors of witdh and height is faster and probably better than my first approach via while loop
-					double xscale = rect.Width() / w;
-					double yscale = rect.Height() / h;
+					double const xscale = rect.Width() / w;
+					double const yscale = rect.Height() / h;
+
+					// RW: 2026-02-16 08:26:41 keep the old behaviour when GetSizeDescWindowToContent() is activated
+					//if (CGetSetOptions::GetSizeDescWindowToContent())
+					//	m_scale = xscale;
+					//else
 					m_scale = xscale < yscale ? xscale : yscale;
 					m_scale = max(m_scale, 0.01); // it doesn't hurt
-
-					// first/another approach, but the ternary conditional operator seems to do the trick better
-					// m_scale = rect.Width() / w;
-					// int nH = static_cast<int>(rect.Height() * (1 / m_scale));
-					// if (h > nH) {
-					// 	int loop = 0; // safeguard
-					//	while (h > nH && loop < 150) {
-					//		m_scale -= .01;
-					//		nH = static_cast<int>(rect.Height() * (1 / m_scale));
-					//		loop++;
-					//	}
-					//	m_scale = max(m_scale, 0.01); // it doesn't hurt
-					//}
+					//// }
 				}
 			}
 			else
@@ -224,8 +219,8 @@ BOOL CImageViewer::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
 
 		this->UnlockWindowUpdate();*/
 
-		// RW: 2026-02-12 12:37:52 this new added method can be used here
-		DoScale(zDelta > 0 ? 2 : 1, pt);
+		// RW: 2026-02-12 12:37:52 this new added method can be used here too
+		DoScale(zDelta > 0 ? ZoomIn : ZoomOut, pt);
 	}
 	else
 	{
@@ -475,7 +470,7 @@ LRESULT CImageViewer::OnGestureNotify(WPARAM wParam, LPARAM lParam)
 
 // RW: 2026-02-12 10:41:14 added imageviewer scaling via keyboard ('-' = Unzoom, '+' = Zoom, '*' = Scaleimagestofitwindow)
 // public dispatcher method for CToolTipEx::OnMsg(MSG *pMsg) handler in ToolTipEx.cpp
-void CImageViewer::DoScale(const unsigned char amode, const CPoint apt)
+void CImageViewer::DoScale(const workmode amode, const CPoint apt)
 {
 	// OutputDebugString(_T("scale image via keyboard inputs\r\n"));
 	// AfxMessageBox(std::to_wstring(mode).c_str());
@@ -498,16 +493,16 @@ void CImageViewer::DoScale(const unsigned char amode, const CPoint apt)
 	}
 
 	switch (amode) {
-	case 0:
+	case FitToWindow:
 		m_scale = 1;
 		// RW: If the '*' key acts like a global ImagefitToWindow switch, it makes sense to always enable this option.
 		// if (m_hoveringOverImage)
 		CGetSetOptions::SetScaleImagesToDescWindow(true);
 		break;
-	case 1:
+	case ZoomOut:
 		m_scale -= .1;
 		break;
-	case 2:
+	case ZoomIn:
 		m_scale += .1;
 		break;
 	}

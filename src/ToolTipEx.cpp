@@ -44,7 +44,7 @@ BEGIN_MESSAGE_MAP(CToolTipEx, CWnd)
 	//{{AFX_MSG_MAP(CToolTipEx)
 	ON_WM_PAINT()
 	ON_WM_SIZE()
-	ON_WM_NCHITTEST()
+	ON_WM_NCHITTEST()	
 	ON_WM_ACTIVATE()
 	ON_WM_TIMER()
 	ON_WM_NCLBUTTONDBLCLK()
@@ -336,9 +336,12 @@ BOOL CToolTipEx::Hide()
 {
 	delete m_imageViewer.m_pGdiplusBitmap;
 	m_imageViewer.m_pGdiplusBitmap = NULL;
-
+	
 	SaveWindowSize();	
 	ShowWindow(SW_HIDE);
+
+	// RW: This is a temporary condition and should be treated as such
+	m_fullsizeMode.clear();
 
 	if (m_browser.m_hWnd != NULL &&
 		::IsWindow(m_browser.m_hWnd))
@@ -380,7 +383,13 @@ void CToolTipEx::SaveWindowSize()
 		}
 		else
 		{
-			this->GetWindowRect(&rect);
+			// RW: m_fullsizeMode will be used only temporary, so do not save current window pos, but restore origin rect and window state
+			if (m_fullsizeMode.active && !m_fullsizeMode.rect.IsRectNull()) {
+				rect = m_fullsizeMode.rect;
+				CGetSetOptions::SetSizeDescWindowToContent(m_fullsizeMode.lastwfmode);
+			}
+			else
+				this->GetWindowRect(&rect);
 		}
 
 		CSize s = rect.Size();
@@ -498,20 +507,36 @@ BOOL CToolTipEx::OnMsg(MSG *pMsg)
                 WPARAM vk = pMsg->wParam;
 
 				// RW: 2026-02-12 10:41:14 added imageviewer scaling via keyboard (numpad keys: '-' = zoom_out, '+' = zoom_in, '*' = Scaleimagestofitwindow)
+				// only do this for imageviewer
 				if (::IsWindow(m_imageViewer.m_hWnd) && m_imageViewer.m_pGdiplusBitmap) {
 					switch (vk) {
 					case VK_SUBTRACT: // '-'
-						m_imageViewer.DoScale(1, CPoint(-1, -1));
+						m_imageViewer.DoScale(m_imageViewer.ZoomOut, CPoint(-1, -1));
 						return TRUE;
 					case VK_ADD:  // '+'
-						m_imageViewer.DoScale(2, CPoint(-1, -1));
+						m_imageViewer.DoScale(m_imageViewer.ZoomIn, CPoint(-1, -1));
 						return TRUE;
 					case VK_MULTIPLY: // '*' fit image to window or size window to content
-						if (GetKeyState(VK_CONTROL) & 0x8000) {
+						// full view mode (SHIFT + CTRL + '*')
+						if ((GetKeyState(VK_CONTROL) & 0x8000) && (GetKeyState(VK_SHIFT) & 0x8000)) {							
+							m_fullsizeMode.active = !m_fullsizeMode.active;
+							// force full view mode
+							if (m_fullsizeMode.active) {
+								// save window state, cause full window mode should not be saved permanently
+								m_fullsizeMode.lastwfmode = CGetSetOptions::GetSizeDescWindowToContent();
+								// will be(re)set in OnSizewindowtocontent(), therefore we set option here to false to SET it back to true :-)
+								CGetSetOptions::SetSizeDescWindowToContent(false);
+							}						
 							OnSizewindowtocontent();
 						}
+						// size window to content (Ditto standard behaviour) (CTRL + '*')
+						else if (GetKeyState(VK_CONTROL) & 0x8000) {							
+							m_fullsizeMode.active = false;
+							OnSizewindowtocontent();
+						}
+						// scale image to current imager viewer window size ('*' key)
 						else {
-							m_imageViewer.DoScale(0, CPoint(-1, -1));
+							m_imageViewer.DoScale(m_imageViewer.FitToWindow, CPoint(-1, -1));
 						}
 						return TRUE;
 					}
@@ -1294,6 +1319,28 @@ void CToolTipEx::OnSizewindowtocontent()
 
 	CRect rect;
 	this->GetWindowRect(&rect);
+	
+	// RW: 2026-02-12 10:41:14 added imageviewer 'full window size' scaling via keyboard
+	if (m_fullsizeMode.active) {
+		
+		// save the origin window pos rect if needed (= rect is 'empty')
+		if (m_fullsizeMode.rect.IsRectNull()) {
+			m_fullsizeMode.rect = rect;
+		}
+
+		// temporary 'full size' window mode (use full desktop space)
+		rect.TopLeft() = (0, 0);
+
+	}
+	
+	// otherwise restore last valid window pos rect
+	else if (!m_fullsizeMode.rect.IsRectEmpty()) {
+	
+		rect = m_fullsizeMode.rect;
+		m_fullsizeMode.rect.SetRectEmpty(); // rect.SetRect(0, 0, 0, 0); // clearRect();
+		// save current window state
+		m_fullsizeMode.lastwfmode = CGetSetOptions::GetSizeDescWindowToContent();
+	}
 
 	Show(rect.TopLeft());
 }

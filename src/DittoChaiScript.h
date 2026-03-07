@@ -14,6 +14,9 @@ public:
 	std::string m_activeApp;
 	std::string m_activeAppTitle;
 
+	// RW: 2026-03-01 12:24:09 IsDuplicate method added to ChaiScriptOnCopy methods 
+	BOOL m_isDuplicate = false;
+
 	std::string GetAsciiString();
 	void SetAsciiString(std::string stringVal);
 
@@ -26,6 +29,9 @@ public:
 	std::string GetActiveApp() { return m_activeApp; }
 	std::string GetActiveAppTitle() { return m_activeAppTitle; }
 
+	// RW: 2026-03-01 12:24:09 IsDuplicate method added to ChaiScriptOnCopy methods 
+	BOOL IsDuplicate() const noexcept { return m_isDuplicate; }
+
 	BOOL RemoveFormat(std::string clipboardFormat);
 	BOOL FormatExists(std::string clipboardFormat);
 	BOOL SetParentId(int parentId);
@@ -34,6 +40,13 @@ public:
 
 	BOOL DescriptionMatchesRegex(std::string regex);
 	void DescriptionReplaceRegex(std::string regex, std::string replaceWith);
+
+	// RW: 2026-01-28 17:06:27 added ChaiScript caller for external apps via ShellExecuteA command
+	void CallExternal(const std::string command, const std::string params, const bool dobeep, const bool debugmode);
+	// RW: 2026-01-28 17:06:27 added ChaiScript for easier getting file extension
+	std::string CDittoChaiScript::GetFileExtension(const std::string FileName);
+	// RW: 2026-02-03 15:09:42 copied image files can be edited with an image editing application if we pass the path to the image file.
+	std::string CDittoChaiScript::GetPictureFileName();
 
 	void SetMakeTopSticky();
 	void SetMakeLastSticky();

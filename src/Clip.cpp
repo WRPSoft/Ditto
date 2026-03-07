@@ -585,9 +585,20 @@ int CClip::LoadFromClipboard(CClipTypes* pClipTypes, bool checkClipboardIgnore, 
 	}
 
 	bool calledOnCopyScript = false;
+
+	// RW: 2026-03-01 12:24:09 maybe better handle this at ChaiScript level, so user can decide if they want to call on copy scripts on duplicates or not
+	// An if-clause before the loop to prevent entering the for-loop would also be a way to prevent duplicates, if we want to hide this from the user
+	bool isdupl = FALSE;
+	if (!CGetSetOptions::GetAllowDuplicates() && m_parentId < 0)
+	{
+		m_CRC = GenerateCRC();
+		isdupl = FindDuplicate() >= 0;
+		m_CRC = 0;
+	}
+
 	try
 	{
-		for (auto & listItem : CGetSetOptions::m_copyScripts.m_list)
+		for (auto& listItem : CGetSetOptions::m_copyScripts.m_list)
 		{
 			if (listItem.m_active)
 			{
@@ -595,14 +606,19 @@ int CClip::LoadFromClipboard(CClipTypes* pClipTypes, bool checkClipboardIgnore, 
 
 				ChaiScriptOnCopy onCopy;
 				CDittoChaiScript clipData(this, (LPCSTR)CTextConvert::UnicodeToAnsi(activeApp), (LPCSTR)CTextConvert::UnicodeToAnsi(activeAppTitle));
+
+				clipData.m_isDuplicate = isdupl;
+				
 				if (onCopy.ProcessScript(clipData, (LPCSTR)CTextConvert::UnicodeToAnsi(listItem.m_script)) == false)
 				{
 					Log(StrF(_T("End of process copy name: %s, returned false, not saving this copy to Ditto, last Error: %s"), listItem.m_name, onCopy.m_lastError));
 
-					return -1;
+					// RW: 2026-03-02 10:08:59 This means that the for loop and the whole method will be left if a single ChaiScript in the chain returns the value false???
+					// return -1;
 				}
-
-				calledOnCopyScript = true;
+				// RW: 2026-03-02 10:10:51 maybe this a better approach, to allow the rest of the scripts to run even if one embedded script returns false
+				else
+					calledOnCopyScript = true;
 
 				Log(StrF(_T("End of process copy name: %s, returned true, last Error: %s"), listItem.m_name, onCopy.m_lastError));
 			}
@@ -612,7 +628,7 @@ int CClip::LoadFromClipboard(CClipTypes* pClipTypes, bool checkClipboardIgnore, 
 			}
 		}
 	}
-	catch (CException *ex)
+	catch (CException* ex)
 	{
 		TCHAR szCause[255];
 		ex->GetErrorMessage(szCause, 255);
@@ -622,7 +638,7 @@ int CClip::LoadFromClipboard(CClipTypes* pClipTypes, bool checkClipboardIgnore, 
 	}
 	catch (...)
 	{
-		Log(_T("save copy exception 2"));	
+		Log(_T("save copy exception 2"));
 	}
 
 	//copy script could have changed the data, make sure the description matches
@@ -773,11 +789,11 @@ bool CClip::AddToDB(bool bCheckForDuplicates)
 
 		m_CRC = GenerateCRC();
 
-		if(bCheckForDuplicates &&
+		if (bCheckForDuplicates &&
 			m_parentId < 0)
 		{	
-			int nID = FindDuplicate();
-			if(nID >= 0)
+			int const nID = FindDuplicate();
+			if (nID >= 0)
 			{
 				MakeLatestOrder();
 				MakeLatestGroupOrder();

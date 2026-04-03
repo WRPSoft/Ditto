@@ -314,6 +314,18 @@ void CQuickPaste::MoveSelection(bool down)
 	}
 }
 
+// RW: 2026-03-14 special paste (paste and select previous/next entry)
+void CQuickPaste::PasteAndSelect(bool ainc)
+{
+	if (m_pwndPaste)
+	{
+		if (IsWindow(m_pwndPaste->m_hWnd))
+		{
+			m_pwndPaste->DoActionPasteSelectedIncDec(ainc);
+		}
+	}
+}
+
 void CQuickPaste::OnKeyStateUp()
 {
 	if(m_pwndPaste && CGetSetOptions::m_moveSelectionOnOpenHotkey)

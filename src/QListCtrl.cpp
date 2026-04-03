@@ -203,8 +203,16 @@ CQListCtrl::CQListCtrl()
 	m_pchTip = NULL;
 	m_pwchTip = NULL;
 	m_linesPerRow = 1;
+
+	// RW: 2026-02-23 14:59:07 default, for one line per row, icon size is 20 x 20.
+	m_iconheight = 20;
+
 	m_windowDpi = NULL;
 	m_SmallFont = NULL;
+
+	// RW: 2026-03-16 underline url text if option CallUrlByDblClick is enabled
+	m_UDLFont = NULL;
+
 	m_pToolTip = NULL;
 	m_pFormatter = NULL;
 	m_allSelected = false;
@@ -225,6 +233,10 @@ CQListCtrl::~CQListCtrl()
 
 	if (m_SmallFont)
 		::DeleteObject(m_SmallFont);
+
+	// RW: 2026-03-16 underline url text if option CallUrlByDblClick is enabled
+	if (m_UDLFont)
+		::DeleteObject(m_UDLFont);
 
 	m_Font.DeleteObject();
 
@@ -400,6 +412,12 @@ void CQListCtrl::SetNumberOfLinesPerRow(int nLines, bool force)
 	{
 		m_linesPerRow = nLines;
 
+		// RW: 2026-02-23 14:58:40
+		m_iconheight = 20;
+		if (m_linesPerRow > 0) {
+			m_iconheight += m_linesPerRow < 4 ? (m_linesPerRow - 1) * 12 : 3 * 12;
+		}
+
 		CRect rc;
 		GetWindowRect(&rc);
 		WINDOWPOS wp;
@@ -550,9 +568,27 @@ void CQListCtrl::OnCustomdrawList(NMHDR* pNMHDR, LRESULT* pResult)
 				drawInGroupIcon = false;
 		}
 
-		DrawCopiedColorCode(csText, rcText, pDC);
+		// RW: 2026-03-24 07:57:00 moved some lines below, so that listview icons will be placed before the color code image
+		// DrawCopiedColorCode(csText, rcText, pDC);
 
-		DrawBitMap(nItem, rcText, pDC, csText);
+		// RW: 2026-02-22 19:55:47 new Option, list icons (Text, RTF-text, URLs, EMails and Images) at the left side of the clipboard entries
+		// must be tested on high DPI PCs/Screens cause icons will be loaded as 32 x 32 pixel images and down- or upscaled if needed
+		//DrawBitMap(nItem, rcText, pDC, csText);
+		boolean dodraw = bit_check(CGetSetOptions::m_bShowListIcons, 0);
+		if (dodraw)
+			dodraw = !DrawBitMap(nItem, rcText, pDC, csText);
+		else // otherwise it doesn't matter (= dodraw always false)
+			DrawBitMap(nItem, rcText, pDC, csText);
+
+		boolean const isUrl = IsURL(csText);
+		boolean const isMail = isUrl ? false : IsEMail(csText);
+
+		// RW: 2026-02-22 19:55:47 Listview Type Icons (couldn't that a performance issue if we have to check for 
+		// RTF, HTML and Files for each entry by a SQL query. Maybe we can save some info in the item data when adding items to the list?)
+		if (dodraw && strSymbols.Find(_T("<group>")) < 0) {
+			DrawListViewIcons(nItem, isUrl, isMail, rcText, pDC);
+		}
+		DrawCopiedColorCode(csText, rcText, pDC);
 
 		// draw the symbol box
 		if (strSymbols.GetLength() > 0)
@@ -586,6 +622,12 @@ void CQListCtrl::OnCustomdrawList(NMHDR* pNMHDR, LRESULT* pResult)
 				m_stickyImage.Draw(pDC, *m_windowDpi, this, rcText.left, rcText.top, false, false);
 				rcText.left += m_stickyImage.ImageWidth() + m_windowDpi->Scale(2);
 			}
+		}		
+
+		// RW: 2026-03-16 underline url text if option CallUrlByDblClick is enabled
+		HFONT hDefFont = NULL;
+		if (isUrl && CGetSetOptions::m_bCallUrlByDblClick) {
+			hDefFont = (HFONT)pDC->SelectObject(m_UDLFont);
 		}
 
 		if (DrawRtfText(nItem, rcText, pDC) == FALSE)
@@ -601,6 +643,11 @@ void CQListCtrl::OnCustomdrawList(NMHDR* pNMHDR, LRESULT* pResult)
 			{
 				pDC->DrawText(csText, rcText, DT_VCENTER | DT_EXPANDTABS | DT_NOPREFIX);
 			}
+		}
+
+		// RW: 2026-03-16
+		if (hDefFont) {
+			pDC->SelectObject(hDefFont);
 		}
 
 		// Draw a focus rect around the item if necessary.
@@ -1116,6 +1163,91 @@ void CQListCtrl::DrawCopiedColorCode(CString& csText, CRect& rcText, CDC* pDC)
 	}
 }
 
+// RW: 2026-03-22
+void CQListCtrl::DrawListViewIcons(const int nItem, const BOOL bisURL, const BOOL bisMail, CRect& rcText, CDC* pDC)
+{
+	if (bisURL)
+	{
+		m_iconUrl.Draw(pDC, *m_windowDpi, this, rcText.left, rcText.top, false, false, m_iconheight, m_iconheight);
+	}
+	else
+		if (bisMail)
+		{
+			m_iconMail.Draw(pDC, *m_windowDpi, this, rcText.left, rcText.top, false, false, m_iconheight, m_iconheight);
+		}
+	// RW: 2026-02-22 20:01:44 now check for the special registered clipboard formats
+	// We have to check for RTF, HTML and File formats, because we want to display special icons for these formats in the listview
+	// One SQL Query can do this job, if we store the all CLIPFORMAT data fields in a vector for reference
+		else {
+			bool isRegFormat = false;
+			std::vector<CLIPFORMAT> V;
+			//std::vector<CLIPFORMAT> VTypes;
+			CClipFormat cClip;
+			// GetClipData(nItem, cClip, V);
+			// VTypes.assign({ CF_HDROP, GetFormatID(CF_RTF), GetFormatID(_T("HTML Format")) });
+			theApp.GetClipData(GetItemData(nItem), cClip, V);
+			if (V.size() > 0) { // && cClip.m_hgData) {
+				for (const auto& var : V) {
+					if (var == CF_HDROP) {
+						m_iconFile.Draw(pDC, *m_windowDpi, this, rcText.left, rcText.top, false, false, m_iconheight, m_iconheight);
+						isRegFormat = true;
+						break;
+					}
+					else if (var == RegisterClipboardFormat(CF_RTF)) {
+						m_iconRTF.Draw(pDC, *m_windowDpi, this, rcText.left, rcText.top, false, false, m_iconheight, m_iconheight);
+						isRegFormat = true;
+						break;
+					}
+					else if (var == RegisterClipboardFormat(_T("HTML Format"))) {
+						m_iconHTML.Draw(pDC, *m_windowDpi, this, rcText.left, rcText.top, false, false, m_iconheight, m_iconheight);
+						isRegFormat = true;
+						break;
+					}
+				}
+			}
+			// Clip format always seems to be stored in a specific order, so the first approach (lines above) should work and be slightly faster.
+			// first look for HDROP, 
+		//	for (const auto& var : V) {
+		//		if (var == CF_HDROP) {
+		//			m_iconFile.Draw(pDC, *m_windowDpi, this, rcText.left, rcText.top, false, false, m_iconheight, m_iconheight);
+		//			isRegFormat = true;
+		//			break;
+		//		}
+		//	} 
+		//	// then RTF 
+		//	if (!isRegFormat) {
+		//		CLIPFORMAT cf = RegisterClipboardFormat(CF_RTF);
+		//		for (const auto& var : V) {
+		//			if (var == cf) {
+		//				m_iconRTF.Draw(pDC, *m_windowDpi, this, rcText.left, rcText.top, false, false, m_iconheight, m_iconheight);
+		//				isRegFormat = true;
+		//				break;
+		//			}
+		//		}
+		//	}
+		//	// and then HTML format
+		//	if (!isRegFormat) {
+		//		CLIPFORMAT cf = RegisterClipboardFormat(_T("HTML Format"));
+		//		for (const auto& var : V) {
+		//			if (var == cf) { // GetFormatID(_T("HTML Format"))) {
+		//				m_iconHTML.Draw(pDC, *m_windowDpi, this, rcText.left, rcText.top, false, false, m_iconheight, m_iconheight);
+		//				isRegFormat = true;
+		//				break;
+		//			}
+		//		}
+		//	}
+		//}
+		// not needed
+		// cClip.Free();
+		// cClip.Clear();
+		// V.clear();
+
+		// RW: last resort, finally this must be a text based clip (regarding our Listview Icons) :-)
+			if (!isRegFormat)
+				m_iconText.Draw(pDC, *m_windowDpi, this, rcText.left, rcText.top, false, false, m_iconheight, m_iconheight);
+		}
+	rcText.left += m_iconheight + m_windowDpi->Scale(4) + m_windowDpi->Scale(2);
+}
 
 BOOL CQListCtrl::DrawRtfText(int nItem, CRect& crRect, CDC* pDC)
 {
@@ -1166,32 +1298,59 @@ BOOL CQListCtrl::DrawRtfText(int nItem, CRect& crRect, CDC* pDC)
 // DrawBitMap loads a DIB from the DB, draws a crRect thumbnail of the image
 //  to pDC and caches that thumbnail as a DIB in m_ThumbNails[ ItemID ].
 // ALL items are cached in m_ThumbNails (those without images are cached with NULL m_hgData)
+
+// RW: 2026-02-22 19:26:59 only return true if bitmap has been drawn
+// the logic of the return value has been changed, but return value was never used before in the code, so it should be fine.  
+// It will now return false if the item has a bitmap but the option to draw thumbnails is disabled, and true if the item 
+// has a bitmap and it is drawn, or if the item doesn't have a bitmap but the option to draw list icons is enabled and a list icon is drawn.
 BOOL CQListCtrl::DrawBitMap(int nItem, CRect& crRect, CDC* pDC, const CString& csDescription)
 {
-	if (CGetSetOptions::m_bDrawThumbnail == FALSE)
-		return FALSE;
+	// RE: moved some lines below, should not have any impact regarding performance -> needed for the new list icons
+	//if (CGetSetOptions::m_bDrawThumbnail == FALSE)
+	//	return FALSE;
 
 	CClipFormatQListCtrl* format = GetItem_CF_DIB_ClipFormat(nItem);
 	if (format != NULL)
 	{
+
 		HGLOBAL smallImage = format->GetDibFittingToHeight(pDC, crRect.Height());
 		if (smallImage != NULL)
 		{
-			//Will return the width of the bitmap in nWidth
-			int nWidth = 0;
-			if (CBitmapHelper::DrawDIB(pDC, smallImage, crRect.left, crRect.top, nWidth))
-			{
-				// adjust the rect so other information can be drawn next to the thumbnail
-				crRect.left += nWidth + 3;
+			// RW: 2026-02-22 19:55:47 add list icon at the left side of the thumbnail if the option is enabled
+			if (bit_check(CGetSetOptions::m_bShowListIcons, 0)) {
+				m_iconImage.Draw(pDC, *m_windowDpi, this, crRect.left, crRect.top, false, false, m_iconheight, m_iconheight);
+				crRect.left += m_iconheight + m_windowDpi->Scale(4) + m_windowDpi->Scale(2);
 			}
+
+			if (CGetSetOptions::m_bDrawThumbnail) {
+
+				//Will return the width of the bitmap in nWidth
+				int nWidth = 0;
+				if (CBitmapHelper::DrawDIB(pDC, smallImage, crRect.left, crRect.top, nWidth))
+				{
+					// adjust the rect so other information can be drawn next to the thumbnail
+					crRect.left += nWidth + 3;
+				}
+			}
+			return TRUE;
 		}
 	}
 	else if (csDescription.Find(_T("CF_DIB")) == 0)
 	{
-		crRect.left += crRect.Height();
+		// RW: 2026-02-22 19:55:47 this is also an image, but for some reason we couldn't get the DIB data for it. 
+		// Still draw the list icon if the option is enabled, to indicate that there is an image, even though we can't show a thumbnail for it.
+		if (bit_check(CGetSetOptions::m_bShowListIcons, 0)) {
+			m_iconImage.Draw(pDC, *m_windowDpi, this, crRect.left, crRect.top, false, false, m_iconheight, m_iconheight);
+			crRect.left += m_iconheight + m_windowDpi->Scale(4) + m_windowDpi->Scale(2);
+		}
+		if (CGetSetOptions::m_bDrawThumbnail) {
+			crRect.left += crRect.Height();
+		}
+		
+		return TRUE;
 	}
 
-	return TRUE;
+	return FALSE;
 }
 
 void CQListCtrl::RefreshVisibleRows()
@@ -1730,10 +1889,16 @@ bool CQListCtrl::ShowFullDescription(bool bFromAuto, bool fromNextPrev)
 			Clip.Clear();
 		}
 
+		// RW: only do this for images
+		// bool isImage = false;
 		Clip.m_cfType = CF_DIB;
 		if (GetClipData(nItem, Clip) && Clip.m_hgData)
 		{
 			m_pToolTip->SetGdiplusBitmap(Clip.CreateGdiplusBitmap());
+			// isImage = true;
+
+			Clip.Free();
+			Clip.Clear();
 		}
 		else
 		{
@@ -1741,10 +1906,19 @@ bool CQListCtrl::ShowFullDescription(bool bFromAuto, bool fromNextPrev)
 			if (GetClipData(nItem, Clip) && Clip.m_hgData)
 			{
 				m_pToolTip->SetGdiplusBitmap(Clip.CreateGdiplusBitmap());
+				// isImage = true;
+
+				Clip.Free();
+				Clip.Clear();
 			}
 		}
 
+		//if (!bFromAuto || bFromAuto && isImage)
 		m_pToolTip->Show(pt);
+		//else {
+		//	m_pToolTip->SetClipId(0);
+		//	return false;
+		// }
 	}
 
 	return true;
@@ -1862,6 +2036,15 @@ CClipFormatQListCtrl* CQListCtrl::GetItem_CF_RTF_ClipFormat(int nItem)
 void CQListCtrl::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 {
 	CListCtrl::OnHScroll(nSBCode, nPos, pScrollBar);
+}
+
+// RW: 2026-03-06 08:47:11 'adaptive' list view icons for dark modes
+void CQListCtrl::SetAdaptiveIcons(bool adaptive)
+{
+	if (adaptive != m_adaptive_icons)
+	{
+		OnDpiChanged();		
+	}	
 }
 
 void CQListCtrl::DestroyAndCreateAccelerator(BOOL bCreate, CppSQLite3DB& db)
@@ -2285,6 +2468,41 @@ void CQListCtrl::SetDpiInfo(CDPI* dpi)
 	m_stickyImage.Reset();
 	m_stickyImage.LoadStdImageDPI(m_windowDpi->GetDPI(), IDB_STICKY_16_16, IDB_STICKY_20_20, IDB_STICKY_24_24, IDB_STICKY_24_24, IDB_STICKY_32_32, _T("PNG"));
 
+	// RW: must be tested on high DPI PCs/Screens because these list icons will be loaded as 32 x 32 pixel images and downscaled if needed 
+	// That shouldn't be a problem, as these symbols are scaled from 20 x 20 (m_linesPerRow = 1) to a maximum of 56 x 56 pixels (m_linesPerRow = 5);
+	// Best suited for the option m_linesPerRow = 2
+	m_iconText.Reset();
+	m_iconImage.Reset();
+	m_iconRTF.Reset();
+	m_iconMail.Reset();
+	m_iconFile.Reset();
+	m_iconUrl.Reset();
+	m_iconHTML.Reset();
+
+	// show listview icons
+	if (bit_check(CGetSetOptions::m_bShowListIcons, 1) && IsDark(CGetSetOptions::m_Theme.ListBoxEvenRowsBG())) {
+		m_adaptive_icons = true;
+
+		//m_isUrl.LoadStdImageDPI(m_windowDpi->GetDPI(), IDB_IN_FOLDER_16_16, IDB_IN_FOLDER_20_20, IDB_IN_FOLDER_24_24, IDB_IN_FOLDER_24_24, IDB_IN_FOLDER_32_32, _T("PNG"));
+		m_iconUrl.LoadStdImage(IDB_FOLDER_URLD_32, _T("PNG"));
+		m_iconText.LoadStdImage(IDB_FOLDER_EMPTYD_32, _T("PNG"));
+		m_iconImage.LoadStdImage(IDB_FOLDER_IMAGED_32, _T("PNG"));
+		m_iconRTF.LoadStdImage(IDB_FOLDER_RTFD_32, _T("PNG"));
+		m_iconMail.LoadStdImage(IDB_FOLDER_MAILD_32, _T("PNG"));
+		m_iconFile.LoadStdImage(IDB_FOLDER_FILED_32, _T("PNG"));
+		m_iconHTML.LoadStdImage(IDB_FOLDER_HTMLD_32, _T("PNG"));
+	}
+	else {
+		m_adaptive_icons = false;
+		m_iconUrl.LoadStdImage(IDB_FOLDER_URL_32, _T("PNG"));
+		m_iconText.LoadStdImage(IDB_FOLDER_EMPTY_32, _T("PNG"));
+		m_iconImage.LoadStdImage(IDB_FOLDER_IMAGE_32, _T("PNG"));
+		m_iconRTF.LoadStdImage(IDB_FOLDER_RTF_32, _T("PNG"));
+		m_iconMail.LoadStdImage(IDB_FOLDER_MAIL_32, _T("PNG"));
+		m_iconFile.LoadStdImage(IDB_FOLDER_FILE_32, _T("PNG"));
+		m_iconHTML.LoadStdImage(IDB_FOLDER_HTML_32, _T("PNG"));
+	}
+
 	DeleteObject(m_SmallFont);
 
 	CreateSmallFont();
@@ -2310,6 +2528,13 @@ void CQListCtrl::CreateSmallFont()
 	lstrcpy(lf.lfFaceName, _T("Small Font"));
 
 	m_SmallFont = ::CreateFontIndirect(&lf);
+
+	// RW: 2026-03-16
+	LOGFONT lf2;
+	CGetSetOptions::GetFont(lf2);
+	lf2.lfUnderline = true;
+	lstrcpy(lf2.lfFaceName, _T("Underline Font"));
+	m_UDLFont = ::CreateFontIndirect(&lf2);
 }
 
 void CQListCtrl::OnMouseHWheel(UINT nFlags, short zDelta, CPoint pt)

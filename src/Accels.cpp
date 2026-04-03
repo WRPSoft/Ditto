@@ -62,7 +62,7 @@ CString CAccels::GetCmdKeyText(DWORD cmd, CString refData)
 	return cmdShortcutText;
 }
 
-bool CAccels::OnMsg(MSG *pMsg, CAccel &a)
+bool CAccels::OnMsg(MSG *pMsg, CAccel &a, bool const skipcheck)
 {    
 	if((pMsg->message != WM_KEYDOWN && pMsg->message != WM_SYSKEYDOWN))
 	{
@@ -84,11 +84,15 @@ bool CAccels::OnMsg(MSG *pMsg, CAccel &a)
     }
 
     const BYTE vkey = LOBYTE(pMsg->wParam);
-	BYTE mod = 0;
-	if (m_checkModifierKeys)
-	{
-		mod = GetKeyStateModifiers();
-	}
+	//BYTE mod = 0;
+	// RW: 2026 - 02 - 26 14 : 54 : 01 added option : open URL via doubelclick while pressing SHIFT 
+	// skipcheck is only true if called from QPasteWnd MouseDoubeclick event
+	// if (m_checkModifierKeys)
+	//if (m_checkModifierKeys && !skipcheck)
+	//{
+	//	mod = GetKeyStateModifiers();
+	//}
+	BYTE mod = m_checkModifierKeys && !skipcheck ? GetKeyStateModifiers() : 0;
     const DWORD key = ACCEL_MAKEKEY(vkey, mod);
 
     //CString cs;

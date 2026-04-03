@@ -546,6 +546,56 @@ CString GetFileName(CString csFileName)
 	return csFileName;
 }
 
+// RW: 2026-02-23 14:59:07 needed for new list icon functionality
+// this is a very basic check, but it is only used to determine if the text should be treated as an URL
+// for the purpose of showing an URL icon in the list, so it doesn't need to be perfect.
+BOOL IsURL(CString const atext)
+{
+	if (atext.GetLength() == 0)
+		return FALSE;
+
+	std::string str = CT2CA(atext);
+	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+
+	auto contains_sp = str.find(' ') != std::string::npos;
+	//auto contains_dot = str.find('.') != std::string::npos;
+
+	std::string substr = str.substr(0, 4);
+	auto contains_http = substr.find("http") != std::string::npos;
+	auto contains_www = substr.find("www.") != std::string::npos;
+
+	//return substr.find("http") != std::string::npos || substr.find("www.") != std::string::npos ? TRUE : FALSE;
+	return !contains_sp && (contains_http || contains_www);
+}
+
+// RW: 2026-02-23 14:59:07 needed for new list icon functionality
+// this is a very basic check, but it is only used to determine if the text should be treated as an email address 
+// for the purpose of showing an email icon in the list, so it doesn't need to be perfect.
+BOOL IsEMail(CString const atext)
+{
+	if (atext.GetLength() < 6)
+		return FALSE;
+
+	std::string strmail = CT2CA(atext);
+	auto email_length = strmail.length();
+	auto contains_at_sign = strmail.find('@') != std::string::npos;
+	auto contains_sp = strmail.find(' ') != std::string::npos;
+	auto contains_dot = strmail.find('.') != std::string::npos;
+
+	return email_length < 320 && !contains_sp && contains_at_sign && contains_dot;
+}
+ 
+// RW: 2026-02-25 08:26:54
+// needed for new list icon functionality, adaptive (= transparent) icons for dark mode
+BOOL IsDark(COLORREF const color) noexcept
+{
+	int const r = GetRValue(color);
+	int const b = GetBValue(color);
+	int const g = GetGValue(color);
+	
+	//double y = 0.3 * r + 0.59 * g + 0.11 * b;
+	return r * 0.2126 + g * 0.7152 + b * 0.0722 < 128 ? TRUE : FALSE;
+}
 
 /****************************************************************************************************
 BOOL CALLBACK MyMonitorEnumProc(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData)

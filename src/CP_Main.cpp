@@ -501,6 +501,10 @@ void CCP_MainApp::AfterMainCreate()
 
 	m_pCopyAndSaveClipboard = new CHotKey("CopyAndSaveClipboard", 0, false);	
 
+	// RW: 2026-03-14 special paste (paste and select previous/next entry)
+	m_pPasteAndInc = new CHotKey("PowerPasteDown", 0, false);
+	m_pPasteAndDec = new CHotKey("PowerPasteUp", 0, false);
+
 	m_editThread.StartWatchingFolderForChanges();
 
 	LoadGlobalClips();
@@ -1096,6 +1100,47 @@ BOOL CCP_MainApp::GetClipData(long parentId, CClipFormat &Clip)
 	CATCH_SQLITE_EXCEPTION
 
 	return bRet;
+}
+
+// RW: 2026-02-27 11:02:16 GetClipData overload to get all formats for a clip, not just one format.
+// A kind of caching, too avoid multiple SQl queries when drawing listview icons in QListCTRL
+BOOL CCP_MainApp::GetClipData(long parentId, CClipFormat& Clip, std::vector<CLIPFORMAT>& Vektor)
+{
+	BOOL bRet = FALSE;
+
+	try
+	{
+		// RW: of course, can be adjusted, but for now just get the three reistered formats needed for the listview icons
+		//CppSQLite3Query q = theApp.m_db.execQueryEx(_T("SELECT ooData, strClipBoardFormat FROM Data WHERE lParentID = %d AND (strClipboardFormat = '%s' OR strClipboardFormat = '%s' OR strClipboardFormat = '%s') ORDER by strClipboardFormat"), parentId, GetFormatName(CF_HDROP), GetFormatName(RegisterClipboardFormat(CF_RTF)), GetFormatName(RegisterClipboardFormat(_T("HTML Format"))));
+		CppSQLite3Query q = theApp.m_db.execQueryEx(_T("SELECT ooData, strClipBoardFormat FROM Data WHERE lParentID = %d AND (strClipboardFormat = '%s' OR strClipboardFormat = '%s' OR strClipboardFormat = '%s')"), parentId, GetFormatName(CF_HDROP), GetFormatName(RegisterClipboardFormat(CF_RTF)), GetFormatName(RegisterClipboardFormat(_T("HTML Format"))));
+		if (q.eof() == false)
+		{
+			int nDataLen = 0;
+			const unsigned char* cData = q.getBlobField(_T("ooData"), nDataLen);
+			if (cData != NULL)
+			{
+				// Clip.m_hgData = NewGlobal(nDataLen);
+
+				// ::CopyToGlobalHP(Clip.m_hgData, (LPVOID)cData, nDataLen);
+
+				while (q.eof() == false)
+				{
+					CLIPFORMAT const cf = GetFormatID(q.getStringField(_T("strClipBoardFormat")));
+					if (cf > 1) // only the three formats we asked for, but check just in case
+					{
+						//Vektor->push_back(cf);
+						Vektor.push_back(cf);
+					}
+					q.nextRow();
+				}
+
+				bRet = TRUE;
+			}
+		}
+	}
+	CATCH_SQLITE_EXCEPTION
+
+		return bRet;
 }
 
 bool CCP_MainApp::EditItems(CClipIDs &Ids, bool bShowError, bool forceTextEdit)

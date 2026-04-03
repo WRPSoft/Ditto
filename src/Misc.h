@@ -121,6 +121,16 @@ BOOL PreTranslateGuiDll(MSG *pMsg);
 CString GetFilePath(CString csFullPath);
 CString GetFileName(CString csFileName);
 
+// RW: 2026-02-23 14:59:07 needed for new list icon functionality
+BOOL IsURL(CString const atext);
+BOOL IsEMail(CString const atext);
+BOOL IsDark(COLORREF const color) noexcept;
+
+// RW: 2026-02-23 15:01:44 needed for new list icon functionality Bit 0: ListViewIcons activated, Bit 1: + adaptive mode (= transparent icons)
+inline constexpr BYTE bit_set(BYTE number, BYTE n) noexcept { return number | ((BYTE)1 << n); }
+inline constexpr BYTE bit_clear(BYTE number, BYTE n) noexcept { return number & ~((BYTE)1 << n); }
+inline constexpr BOOL bit_check(BYTE number, BYTE n) noexcept { return (number >> n) & (BYTE)1; }
+
 BOOL EnsureWindowVisible(CRect *pcrRect);
 
 CRect DefaultMonitorRect();

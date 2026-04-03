@@ -22,7 +22,6 @@
 #include "MoveToGroupDlg.h"
 #include "Path.h"
 #include "ProcessPaste.h"
-#include "QPasteWnd.h"
 #include "SendMail.h"
 #include <algorithm>
 #include <signal.h>
@@ -48,6 +47,8 @@ static char THIS_FILE[] = __FILE__;
 #define ON_TOP_WARNING 0x209
 #define ID_SYSTEM_BUTTON		0x210
 #define ID_NO_SEARCH_RESULTS	0x211
+
+#define ID_STATUSBAR			0x212
 
 
 #define QPASTE_WIDTH			200
@@ -129,6 +130,7 @@ BEGIN_MESSAGE_MAP(CQPasteWnd, CWndEx)
 	ON_COMMAND(ID_MENU_FIRSTTENHOTKEYS_USECTRLNUM, OnMenuFirsttenhotkeysUsectrlnum)
 	ON_COMMAND(ID_MENU_FIRSTTENHOTKEYS_SHOWHOTKEYTEXT, OnMenuFirsttenhotkeysShowhotkeytext)
 	ON_COMMAND(ID_MENU_QUICKOPTIONS_ALLWAYSSHOWDESCRIPTION, OnMenuQuickoptionsAllwaysshowdescription)
+	ON_COMMAND(ID_MENU_QUICKOPTIONS_SHOWLISTICONS, OnMenuQuickoptionsShowListIcons)
 	ON_COMMAND(ID_MENU_QUICKOPTIONS_DOUBLECLICKINGONCAPTION_TOGGLESALWAYSONTOP, OnMenuQuickoptionsDoubleclickingoncaptionTogglesalwaysontop)
 	ON_COMMAND(ID_MENU_QUICKOPTIONS_DOUBLECLICKINGONCAPTION_ROLLUPWINDOW, OnMenuQuickoptionsDoubleclickingoncaptionRollupwindow)
 	ON_COMMAND(ID_MENU_QUICKOPTIONS_DOUBLECLICKINGONCAPTION_TOGGLESALWAYSSHOWDESCRIPTION, OnMenuQuickoptionsDoubleclickingoncaptionTogglesshowdescription)
@@ -320,6 +322,13 @@ BEGIN_MESSAGE_MAP(CQPasteWnd, CWndEx)
 	ON_UPDATE_COMMAND_UI(ID_CLIPORDER_MOVETOLAST, &CQPasteWnd::OnUpdateCliporderMovetolast)
 	ON_COMMAND(ID_SPECIALPASTE_PASTE32945, &CQPasteWnd::OnSpecialpastePasteDontUpdateOrder)
 	ON_UPDATE_COMMAND_UI(ID_SPECIALPASTE_PASTE32945, &CQPasteWnd::OnUpdateOnSpecialPasteDontUpdateOrder)
+	
+	// RW: 2026-03-14 special power paste (paste and select previous/next entry)
+	ON_COMMAND(ID_SPECIALPASTE_PASTE_INC, &CQPasteWnd::OnSpecialPasteIncSelPos)
+	ON_UPDATE_COMMAND_UI(ID_SPECIALPASTE_PASTE_INC, &CQPasteWnd::OnUpdateOnSpecialPasteIncSelPos)
+	ON_COMMAND(ID_SPECIALPASTE_PASTE_DEC, &CQPasteWnd::OnSpecialPasteDecSelPos)
+	ON_UPDATE_COMMAND_UI(ID_SPECIALPASTE_PASTE_DEC, &CQPasteWnd::OnUpdateOnSpecialPasteDecSelPos)
+		
 	ON_COMMAND(ID_SPECIALPASTE_TRIM, &CQPasteWnd::OnSpecialpasteTrim)
 	ON_COMMAND(ID_SPECIALPASTE_POSIXIFY_PATHS , &CQPasteWnd::OnSpecialpastePosixifyPaths)
 	ON_UPDATE_COMMAND_UI(ID_SPECIALPASTE_TRIM, &CQPasteWnd::OnUpdateSpecialpasteTrim)
@@ -447,13 +456,18 @@ int CQPasteWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		CGetSetOptions::m_Theme.ScrollBarThumbHover()
 	);
 
+	// RW: 2026-03-16 added optional statusbar
+	m_stbRowStart = CGetSetOptions::m_bShowStatusBar ? 20 : 0;
+	m_modernScrollBar.SetStbRowStart(m_stbRowStart);
+	m_modernScrollBarHorz.SetStbRowStart(m_stbRowStart);
+
 	((CWnd*)&m_GroupTree)->CreateEx(NULL, _T("SysTreeView32"), NULL, TVS_HASLINES | TVS_LINESATROOT | TVS_HASBUTTONS, CRect(0, 0, 100, 100), this, 0);
 	m_GroupTree.ModifyStyle(WS_CAPTION | WS_TABSTOP, 0);
 
 	m_GroupTree.SetNotificationWndEx(m_hWnd);
 	m_GroupTree.ShowWindow(SW_HIDE);
 	m_GroupTree.m_showRightClickMenu = true;
-
+		
 	m_ShowGroupsFolderBottom.Create(NULL, WS_CHILD | BS_OWNERDRAW | WS_TABSTOP, CRect(0, 0, 0, 0), this, ID_SHOW_GROUPS_BOTTOM);
 	//m_ShowGroupsFolderBottom.LoadBitmaps(IDB_CLOSED_FOLDER, IDB_CLOSED_FOLDER_PRESSED, IDB_CLOSED_FOLDER_FOCUSED);
 	m_ShowGroupsFolderBottom.LoadStdImageDPI(m_DittoWindow.m_dpi.GetDPI(), open_folder_24, open_folder_30, open_folder_36, open_folder_42, open_folder_48, _T("PNG"), open_folder_54, open_folder_60, open_folder_66, open_folder_72, open_folder_78, open_folder_84);
@@ -473,10 +487,17 @@ int CQPasteWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 	m_stGroup.Create(_T(""), WS_CHILD | WS_VISIBLE, CRect(0, 0, 0, 0), this, ID_GROUP_TEXT);
 
+	// RW: 2026-03-16 added opitonal statusbar
+	//m_stb.Create(_T(""), WS_CHILD | SS_CENTER / SS_LEFT | SS_ENDELLIPSIS, CRect(0, 0, 0, 0), this, ID_STATUSBAR);
+	m_stb.Create(_T(""), WS_CHILD | SS_CENTER | SS_ENDELLIPSIS, CRect(0, 0, 0, 0), this, ID_STATUSBAR);
+	m_stb.SetFont(&m_stbFont);
+	CGetSetOptions::m_bShowStatusBar ? m_stb.ShowWindow(SW_SHOW): m_stb.ShowWindow(SW_HIDE);
+
 	//Set the z-order
 	m_lstHeader.SetWindowPos(this, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
 	m_search.SetWindowPos(&m_lstHeader, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
 	m_ShowGroupsFolderBottom.SetWindowPos(&m_search, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+	m_stb.SetWindowPos(&m_lstHeader, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
 
 	//LVS_EX_FLATSB
 	m_lstHeader.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_HEADERDRAGDROP);
@@ -662,8 +683,11 @@ void CQPasteWnd::MoveControls()
 {
 	CRect crRect;
 	GetClientRect(crRect);
-	int cx = crRect.Width();
-	int cy = crRect.Height();
+	int const cx = crRect.Width();
+	int const cy = crRect.Height();
+
+	// RW: 2026-03-16 added optional statusbar
+	m_stbRowStart = CGetSetOptions::m_bShowStatusBar ? 20 : 0;
 
 	//Hide the two pixels of space at the top, not sure where this is coming from
 	int topOfListBox = 0;
@@ -684,20 +708,20 @@ void CQPasteWnd::MoveControls()
 		m_stGroup.ShowWindow(SW_HIDE);
 	}
 
-	int searchRowStart = 33;
+	int const searchRowStart = 33;
 
 	/*if(CGetSetOptions::m_bShowPersistent)
 	{
 		searchRowStart = 41;
 	}*/
 
-	int nWidth = cx;
-	int listBoxBottomOffset = m_DittoWindow.m_dpi.Scale(searchRowStart);
+	int const nWidth = cx;
+	int const listBoxBottomOffset = m_DittoWindow.m_dpi.Scale(searchRowStart + m_stbRowStart);
 
 	int extraSize = 0;
 
 	// Hide native scrollbar if using modern scrollbar OR if scrollbar is set to not always show
-	bool hideNativeScrollbar = CGetSetOptions::m_useModernScrollBar || 
+	bool const hideNativeScrollbar = CGetSetOptions::m_useModernScrollBar || 
 		(m_showScrollBars == false && CGetSetOptions::m_showScrollBar == false);
 
 	if (hideNativeScrollbar)
@@ -726,7 +750,7 @@ void CQPasteWnd::MoveControls()
 		m_modernScrollBar.ShowWindow(SW_HIDE);
 		m_modernScrollBarHorz.ShowWindow(SW_HIDE);
 
-		auto border = m_DittoWindow.m_dpi.Scale(10);
+		auto const border = m_DittoWindow.m_dpi.Scale(10);
 		m_noSearchResultsStatic.MoveWindow(border, topOfListBox + border, cx - border, cy - listBoxBottomOffset - topOfListBox + 1 - border);
 	}
 	else
@@ -759,12 +783,19 @@ void CQPasteWnd::MoveControls()
 			m_modernScrollBar.Hide(false);
 			m_modernScrollBarHorz.Hide(false);
 		}
+		m_modernScrollBar.SetStbRowStart(m_stbRowStart);
+		m_modernScrollBarHorz.SetStbRowStart(m_stbRowStart);
+
 	}
-	m_search.MoveWindow(m_DittoWindow.m_dpi.Scale(34), cy - m_DittoWindow.m_dpi.Scale(searchRowStart - 5), cx - m_DittoWindow.m_dpi.Scale(70), m_DittoWindow.m_dpi.Scale(25));
+	m_search.MoveWindow(m_DittoWindow.m_dpi.Scale(34), cy - m_DittoWindow.m_dpi.Scale(searchRowStart + m_stbRowStart - 5), cx - m_DittoWindow.m_dpi.Scale(70), m_DittoWindow.m_dpi.Scale(25));
 
-	m_systemMenu.MoveWindow(cx - m_DittoWindow.m_dpi.Scale(30), cy - m_DittoWindow.m_dpi.Scale(28), m_DittoWindow.m_dpi.Scale(24), m_DittoWindow.m_dpi.Scale(24));
+	m_systemMenu.MoveWindow(cx - m_DittoWindow.m_dpi.Scale(30), cy - m_DittoWindow.m_dpi.Scale(28 + m_stbRowStart), m_DittoWindow.m_dpi.Scale(24), m_DittoWindow.m_dpi.Scale(24));
 
-	m_ShowGroupsFolderBottom.MoveWindow(m_DittoWindow.m_dpi.Scale(4), cy - m_DittoWindow.m_dpi.Scale(28), m_DittoWindow.m_dpi.Scale(24), m_DittoWindow.m_dpi.Scale(24));
+	m_ShowGroupsFolderBottom.MoveWindow(m_DittoWindow.m_dpi.Scale(4), cy - m_DittoWindow.m_dpi.Scale(28 + m_stbRowStart), m_DittoWindow.m_dpi.Scale(24), m_DittoWindow.m_dpi.Scale(24));
+
+	// RW: 2026-03-16 added optional statusbar
+	CGetSetOptions::m_bShowStatusBar ? m_stb.ShowWindow(SW_SHOW) : m_stb.ShowWindow(SW_HIDE);
+	m_stb.MoveWindow(0, cy - m_stbRowStart, cx + extraSize, m_stbRowStart);
 
 	/*if (CGetSetOptions::m_bShowPersistent &&
 		CGetSetOptions::m_bShowAlwaysOnTopWarning)
@@ -992,6 +1023,9 @@ BOOL CQPasteWnd::ShowQPasteWindow(BOOL bFillList)
 
 	SetCurrentTransparency();
 
+	// RW: 2026-03-06 09:34:54
+	m_lstHeader.SetAdaptiveIcons(bit_check(CGetSetOptions::m_bShowListIcons, 1));
+
 	m_lstHeader.SetNumberOfLinesPerRow(CGetSetOptions::GetLinesPerRow(), false);
 	m_lstHeader.SetShowTextForFirstTenHotKeys(CGetSetOptions::GetShowTextForFirstTenHotKeys());
 	m_lstHeader.SetShowIfClipWasPasted(CGetSetOptions::GetShowIfClipWasPasted());
@@ -1039,11 +1073,11 @@ BOOL CQPasteWnd::OpenID(int id, CSpecialPasteOptions pasteOptions)
 
 	if (pasteOptions.m_pPasteFormats == NULL)
 	{
-		if (theApp.EnterGroupID(id, FALSE, FALSE))
+		if (pasteOptions.m_powerPaste == 0 && theApp.EnterGroupID(id, FALSE, FALSE))
 		{
 			Log(_T("Entered group"));
 			return TRUE;
-		}
+		}	
 	}
 
 	// else, it is a clip, so paste it
@@ -1052,6 +1086,37 @@ BOOL CQPasteWnd::OpenID(int id, CSpecialPasteOptions pasteOptions)
 	paste.m_bSendPaste = CGetSetOptions::m_bSendPasteMessageAfterSelection == TRUE ? true : false;
 	paste.m_pasteOptions = pasteOptions;
 	paste.m_pastedFromGroup = (theApp.m_GroupID > 0);
+
+	// RW: 2026-02-26 14:54:01 added option: open URL via doubelclick while pressing SHIFT
+	// this option must be activated, so that the old behavior will be default, and users can choose to open URL with double click + SHIFT
+	// be aware, only one clip entry must be selected, otherwise this method OpenID won't be called!
+	if (paste.m_pasteOptions.m_powerPaste == 0
+		&& CGetSetOptions::m_bCallUrlByDblClick && GetKeyState(VK_SHIFT) & 0x8000 && GetKeyState(VK_CONTROL) & 0x8000) {
+		if (CheckAndOpenURL(id)) {
+			theApp.OnPasteCompleted();
+			return TRUE;
+		}
+	}
+
+	CString strp = "PowerPaste -> ";
+	CString strc;
+
+	// RW: 2026-03-18 for security reasons, we should avoid CF_HDROP-based clips for power paste
+	// don't want to accidentally paste a file into another application when user intended to use power paste for (normally) text based clips.
+	// maybe this would be make sense for 'bitmap' based clips too?
+	if (paste.m_pasteOptions.m_powerPaste != 0) {
+		if (CheckForHDROPClip(id)) {
+			strc.Format(_T(" [This is not a text-based file: power pasting has been stopped!]"));
+						
+			m_popupMsg.Show(strp + strc, CPoint(0, 0), true);
+			//POINT mouse;
+			//GetCursorPos(&mouse);
+			//m_popupMsg.Show(strp + strc, mouse, true);
+			SetTimer(TIMER_ERROR_MSG, CGetSetOptions::GetErrorMsgPopupTimeout(), NULL);
+			theApp.m_pMainFrame->m_trayIcon.SetBalloonDetails(strp + strc, _T("PowerPaste"), CTrayNotifyIcon::BalloonStyle::Info, CGetSetOptions::GetBalloonTimeout());
+			return FALSE;
+		}
+	}
 
 	paste.GetClipIDs().Add(id);
 
@@ -1062,6 +1127,49 @@ BOOL CQPasteWnd::OpenID(int id, CSpecialPasteOptions pasteOptions)
 		if (CGetSetOptions::m_bSendPasteMessageAfterSelection == FALSE)
 		{
 			theApp.m_activeWnd.ActivateTarget();
+		}
+
+		// RW: 2026-03-14 special paste (paste and select previous/next entry)
+		if (paste.m_pasteOptions.m_powerPaste != 0) {
+
+			POSITION mpos = m_lstHeader.GetFirstSelectedItemPosition();
+			if (mpos != NULL) {
+				CString strh = "";
+				strc = "";
+				bool bshowbal = false;
+				int idx = m_lstHeader.GetNextSelectedItem(mpos);
+				int const oldpos = idx + 1;
+
+				switch (paste.m_pasteOptions.m_powerPaste) {
+				case 1:
+					if (idx < m_lstHeader.GetItemCount())
+						idx++;
+					else {
+						strh = " [END of clip list reached!]";
+						bshowbal = true;
+					}
+					break;
+				case -1:
+					if (idx > 0)
+						idx--;
+					else {
+						strh = " [TOP of clip list reached!]";
+						bshowbal = true;
+					}
+				}
+
+				const long nScreenWidth = ::GetSystemMetrics(SM_CXSCREEN);
+			
+				strc.Format(_T("Pos: [%d/%d]"), oldpos, m_lstHeader.GetItemCount());
+				if (bshowbal) {
+					theApp.m_pMainFrame->m_trayIcon.SetBalloonDetails(strp + strc + strh, _T("PowerPaste"), CTrayNotifyIcon::BalloonStyle::Info, CGetSetOptions::GetBalloonTimeout());
+				}
+				m_popupMsg.Show(strp + strc + strh, CPoint(nScreenWidth / 2 - 150, 10), false);
+				SetTimer(TIMER_ERROR_MSG, CGetSetOptions::GetErrorMsgPopupTimeout(), NULL);
+
+				m_lstHeader.SetListPos(idx); 						
+				// m_lstHeader.SetFocus();
+			}
 		}
 
 		if (CGetSetOptions::m_bShowPersistent && CGetSetOptions::GetAutoHide())
@@ -1385,6 +1493,8 @@ void CQPasteWnd::RefreshNc()
 void CQPasteWnd::UpdateStatus(bool bRepaintImmediately)
 {
 	CString title = m_Title;
+	// RW: 2026-03-16 added a 'real' but optional statusbar
+	CString strstb;
 
 	if (CGetSetOptions::m_bShowPersistent)
 	{
@@ -1395,33 +1505,51 @@ void CQPasteWnd::UpdateStatus(bool bRepaintImmediately)
 	{
 		title += _T(" ");
 		title += theApp.m_Language.GetString("disconnected", "[Disconnected]");
+		// RW: 2026-03-16 added statusbar
+		// strstb = _T(" ") + theApp.m_Language.GetString("disconnected", "[Disconnected]");
 	}
 
-	CString cs;
-	cs.Format(_T(" - %d/%d"), m_lstHeader.GetSelectedCount(), m_lstHeader.GetItemCount());
-	title += cs;
+	// RW: 2026-02-22 10:23:59 get (first) selected clip position (just for fun, not sure if this is useful information to show)
+	POSITION mpos = m_lstHeader.GetFirstSelectedItemPosition();
+	int ipos = mpos != NULL ? m_lstHeader.GetNextSelectedItem(mpos) + 1 : 0;
 
+	CString cs;
+	cs.Format(_T(" - [%d] %d/%d"), ipos, m_lstHeader.GetSelectedCount(), m_lstHeader.GetItemCount());
+	title += cs;
+	// RW: 2026-03-16 added statusbar
+	strstb += strstb != "" ? cs : cs.Right(cs.GetLength() - 2);
+	
 	if (theApp.m_Status != "")
 	{
 		title += " [ ";
 		title += theApp.m_Status;
 		title += " ] - ";
+		strstb += " [ " + theApp.m_Status + " ] - ";
 	}
 	else
 	{
 		title += " - ";
+		strstb += " - ";
 	}
 
 	if (::IsWindow(theApp.m_activeWnd.ActiveWnd()))
 	{
 		title += theApp.m_activeWnd.ActiveWndName();
+		strstb += theApp.m_activeWnd.ActiveWndName();
 	}
 	else
 	{
 		title += theApp.m_Language.GetString("No_Target", "No target");
+		strstb += theApp.m_Language.GetString("No_Target", "No target");
 	}
 
 	SetToolTipText(title);
+
+	// RW: 2026-03-16 added statusbar
+	if (CGetSetOptions::m_bShowStatusBar) {
+		m_stb.SetWindowText(strstb);
+		//m_stb.EnableToolTips(); //  UpdateTipText(strstb, this, 1);
+	}
 
 	CString windowTitle = _T(QPASTE_TITLE);
 
@@ -1871,6 +1999,9 @@ void CQPasteWnd::SetMenuChecks(CMenu* pMenu)
 		break;
 	}
 
+	// RW: 2026-02-22 10:28:44 added option to show list icons	
+	bit_check(CGetSetOptions::GetShowListIcons(), 0) ? pMenu->CheckMenuItem(ID_MENU_QUICKOPTIONS_SHOWLISTICONS, MF_CHECKED): pMenu->CheckMenuItem(ID_MENU_QUICKOPTIONS_SHOWLISTICONS, MF_UNCHECKED);
+			
 	if (CGetSetOptions::GetAllwaysShowDescription())
 	{
 		pMenu->CheckMenuItem(ID_MENU_QUICKOPTIONS_ALLWAYSSHOWDESCRIPTION, MF_CHECKED);
@@ -2142,6 +2273,15 @@ void CQPasteWnd::UpdateFont()
 	m_stGroup.SetBkColor(CGetSetOptions::m_Theme.MainWindowBG());
 	m_stGroup.SetTextColor(CGetSetOptions::m_Theme.ListBoxEvenRowsText());
 
+	// RW: 2026-03-16 added statusbar
+	m_stbFont.DeleteObject();
+	m_stbFont.CreateFont(-m_DittoWindow.m_dpi.Scale(11), 0, 0, 0, 400, 0, 0, 0, DEFAULT_CHARSET, 3, 2, 1, 34, _T("Segoe UI"));
+	m_stb.SetFont(&m_stbFont);
+	//m_stb.SetBkColor(CGetSetOptions::m_Theme.GroupTreeBG());
+	m_stb.SetBkColor(CGetSetOptions::m_Theme.MainWindowBG());
+	//m_stb.SetTextColor(CGetSetOptions::m_Theme.ListBoxEvenRowsText());
+    IsDark(CGetSetOptions::m_Theme.ListBoxEvenRowsBG()) ? m_stb.SetTextColor(COLORREF(RGB(153, 153, 153))) : m_stb.SetTextColor(COLORREF(RGB(102, 102, 102)));
+	
 	m_noSearchResultsStatic.SetBkColor(CGetSetOptions::m_Theme.MainWindowBG());
 	m_noSearchResultsStatic.SetTextColor(CGetSetOptions::m_Theme.ListBoxEvenRowsText());
 	m_noSearchResultsStatic.SetFont(&m_SearchFont);
@@ -2211,6 +2351,13 @@ void CQPasteWnd::OnMenuNewGroup()
 void CQPasteWnd::OnMenuNewGroupSelection()
 {
 	this->DoAction(ActionEnums::NEWGROUPSELECTION);
+}
+
+void CQPasteWnd::OnMenuQuickoptionsShowListIcons()
+{	
+	// RW: 2026-02-22 10:28:44 added option to show list icons
+	CGetSetOptions::SetShowListIcons(bit_check(CGetSetOptions::m_bShowListIcons, 0) ? bit_clear(CGetSetOptions::m_bShowListIcons, 0) : bit_set(CGetSetOptions::m_bShowListIcons, 0));
+	m_lstHeader.Invalidate();
 }
 
 void CQPasteWnd::OnMenuQuickoptionsAllwaysshowdescription()
@@ -2879,6 +3026,41 @@ void CQPasteWnd::RemoveFromImageRtfCache(int row, int id)
 	}
 }
 
+// RW: 2026-03-06 13:29:14
+BOOL CQPasteWnd::CheckAndOpenURL(int id)
+{
+	CString csText;
+	CClipFormat Clip;
+	Clip.m_cfType = CF_TEXT;
+	theApp.GetClipData(id, Clip);
+	csText = Clip.GetAsCStringA();
+
+	int nSymEnd = csText.Find('|');
+	if (nSymEnd >= 0)
+	{
+		csText = csText.Mid(nSymEnd + 1);
+	}
+
+	if (IsURL(csText))
+	{
+		// ShellExecuteW(NULL, L"open", csText, NULL, NULL, SW_SHOWNORMAL);
+		CHyperLink::GotoURL(csText, SW_SHOW);
+		// theApp.OnPasteCompleted();
+		return TRUE;
+	}
+	return FALSE;
+}
+
+// RW: 2026-03-18 for security reasons, we should avoid CF_HDROP-based clips for power paste
+BOOL CQPasteWnd::CheckForHDROPClip(int id)
+{
+	BOOL bres = FALSE;
+	CClipFormat Clip;
+	Clip.m_cfType = CF_HDROP;
+	bres = theApp.GetClipData(id, Clip);
+	return bres;
+}
+
 CString CQPasteWnd::LoadDescription(int nItem)
 {
 	if (nItem < 0 || nItem >= m_lstHeader.GetItemCount())
@@ -3024,7 +3206,7 @@ BOOL CQPasteWnd::PreTranslateMessage(MSG* pMsg)
 	return CWndEx::PreTranslateMessage(pMsg);
 }
 
-bool CQPasteWnd::CheckActions(MSG* pMsg)
+bool CQPasteWnd::CheckActions(MSG* pMsg, bool const skipcheck)
 {
 	bool ret = false;
 	CAccel a;
@@ -3039,7 +3221,7 @@ bool CQPasteWnd::CheckActions(MSG* pMsg)
 
 	if (ret == false)
 	{
-		if (m_actions.OnMsg(pMsg, a))
+		if (m_actions.OnMsg(pMsg, a, skipcheck))
 		{
 			KillTimer(TIMER_DO_ACTION);
 			ret = DoAction(a);
@@ -3395,6 +3577,15 @@ bool CQPasteWnd::DoAction(CAccel a)
 	case ActionEnums::PASTE_DONT_MOVE_CLIP:
 		ret = DoActionPasteDontMoveClip();
 		break;
+
+    // RW: 2026-03-14 special paste (paste and select previous/next entry)
+	case ActionEnums::PASTE_SELECTED_INC:
+		ret = DoActionPasteSelectedIncDec(true);
+		break;
+	case ActionEnums::PASTE_SELECTED_DEC:
+		ret = DoActionPasteSelectedIncDec(false);
+		break;
+
 	case ActionEnums::PASTE_TRIM_WHITE_SPACE:
 		ret = DoActionPasteTrimWhiteSpace();
 		break;
@@ -4026,6 +4217,18 @@ bool CQPasteWnd::DoActionPasteSelected()
 	CSpecialPasteOptions pasteOptions;
 	OpenSelection(pasteOptions);
 	return true;
+}
+
+// RW: 2026-03-14 special paste (paste and select previous/next entry)
+bool CQPasteWnd::DoActionPasteSelectedIncDec(bool ainc)
+{
+	//SetFocus();
+	m_lstHeader.SetFocus();
+	CSpecialPasteOptions pasteOptions;
+	pasteOptions.m_updateClipOrder = false;
+	pasteOptions.m_powerPaste = ainc ? 1 : -1; // 1 = inc position, -1 = dec position
+	OpenSelection(pasteOptions);
+	return true;	
 }
 
 bool CQPasteWnd::DoActionDeleteSelected()
@@ -7117,10 +7320,10 @@ void CQPasteWnd::OnNMDblclkList1(NMHDR* pNMHDR, LRESULT* pResult)
 	msg.lParam = 0;
 	msg.wParam = VK_MOUSE_DOUBLE_CLICK;
 	msg.message = WM_KEYDOWN;
-	if (CheckActions(&msg) == false)
-	{
-	}
-
+	// RW: 2026 - 02 - 26 14 : 54 : 01 added option : open URL via doubelclick while pressing SHIFT
+	// if (CheckActions(&msg) == false)
+	CheckActions(&msg, CGetSetOptions::m_bCallUrlByDblClick && GetKeyState(VK_SHIFT) & 0x8000 && GetKeyState(VK_CONTROL) & 0x8000);
+	
 	*pResult = 0;
 }
 
@@ -7442,6 +7645,17 @@ void CQPasteWnd::OnSpecialpastePasteDontUpdateOrder()
 	DoAction(ActionEnums::PASTE_DONT_MOVE_CLIP);
 }
 
+// RW: 2026-03-14 special paste (paste and select previous/next entry)
+void CQPasteWnd::OnSpecialPasteIncSelPos()
+{
+	DoAction(ActionEnums::PASTE_SELECTED_INC);
+}
+
+// RW: 2026-03-14 special paste (paste and select previous/next entry)
+void CQPasteWnd::OnSpecialPasteDecSelPos()
+{
+	DoAction(ActionEnums::PASTE_SELECTED_DEC);
+}
 
 void CQPasteWnd::OnUpdateOnSpecialPasteDontUpdateOrder(CCmdUI* pCmdUI)
 {
@@ -7451,6 +7665,28 @@ void CQPasteWnd::OnUpdateOnSpecialPasteDontUpdateOrder(CCmdUI* pCmdUI)
 	}
 
 	UpdateMenuShortCut(pCmdUI, ActionEnums::PASTE_DONT_MOVE_CLIP);
+}
+
+// RW: 2026-03-14 special paste (paste and select previous/next entry)
+void CQPasteWnd::OnUpdateOnSpecialPasteIncSelPos(CCmdUI* pCmdUI)
+{
+	if (!pCmdUI->m_pMenu)
+	{
+		return;
+	}
+
+	UpdateMenuShortCut(pCmdUI, ActionEnums::PASTE_SELECTED_INC);
+}
+
+// RW: 2026-03-14 special paste (paste and select previous/next entry)
+void CQPasteWnd::OnUpdateOnSpecialPasteDecSelPos(CCmdUI* pCmdUI)
+{
+	if (!pCmdUI->m_pMenu)
+	{
+		return;
+	}
+
+	UpdateMenuShortCut(pCmdUI, ActionEnums::PASTE_SELECTED_DEC);
 }
 
 
@@ -8038,8 +8274,9 @@ bool CQPasteWnd::DoCopySelection()
 
 	if (count > 1)
 		paste.GetClipIDs().Copy(IDs);
-	else
+	else {
 		paste.GetClipIDs().Add(IDs[0]);
+	}
 
 	//Don't move these to the top
 	BOOL itWas = CGetSetOptions::m_bUpdateTimeOnPaste;

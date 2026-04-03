@@ -163,6 +163,13 @@ END_MESSAGE_MAP()
 #define SETTING_HIDE_TASKBAR_ICON_ON_CLOSE 109
 #define SETTING_USE_MODERN_SCROLLBAR 110
 #define SETTING_ENFORCE_CLIPBOARD_IGNORE_FORMATS 111
+// RW: 2026-03-06 08:47:11 'adaptive' list view icons for dark modes
+#define SETTING_ADAPTIVE_ICONS 112
+#define SETTING_OPENURL_ONDBLCLK 113
+// RW: 2026-03-16 added statusbar
+#define SETTING_SHOW_STATUSBAR 114
+#define SETTING_SHOW_LVIEW_ICONS 115
+
 
 BOOL CAdvGeneral::OnInitDialog()
 {
@@ -272,6 +279,9 @@ BOOL CAdvGeneral::OnInitDialog()
 
 	AddTrueFalse(pGroupTest, _T("Open to group same as active exe"), CGetSetOptions::GetOpenToGroupByActiveExe(), SETTING_OPEN_TO_GROUP_AS_ACTIVE_EXE);
 
+	// RW: 2026-03-06 08:47:11 
+	AddTrueFalse(pGroupTest, _T("Open Url on double click (while holding Shift and Ctrl keys simultaneously)"), CGetSetOptions::GetCallUrlByDblClick(), SETTING_OPENURL_ONDBLCLK);
+	
 	pGroupTest->AddSubItem(new CMFCPropertyGridProperty(_T("QRCode Url"), CGetSetOptions::GetQRCodeUrl(), _T(""), SETTING_QR_CODE_URL));
 
 	static TCHAR BASED_CODE szFilter[] = _T("Sounds(*.wav)|*.wav||");
@@ -307,6 +317,12 @@ BOOL CAdvGeneral::OnInitDialog()
 
 	AddTrueFalse(pGroupTest, _T("Show clips that are in groups in main list"), CGetSetOptions::GetShowAllClipsInMainList(), SETTING_SHOW_GROUP_CLIPS_IN_LIST);
 	AddTrueFalse(pGroupTest, _T("Show leading whitespace"), CGetSetOptions::GetDescShowLeadingWhiteSpace(), SETTING_SHOW_LEADING_WHITESPACE);
+
+	// RW: 2026-03-06 08:46:12 new list view icons
+	AddTrueFalse(pGroupTest, _T("Show listview icons"), bit_check(CGetSetOptions::GetShowListIcons(), 0), SETTING_SHOW_LVIEW_ICONS);
+	// RW: 2026-03-06 08:47:11 'adaptive' list view icons for dark modes
+	AddTrueFalse(pGroupTest, _T("Adaptive listview icons"), bit_check(CGetSetOptions::GetShowListIcons(), 1), SETTING_ADAPTIVE_ICONS);
+
 	AddTrueFalse(pGroupTest, _T("Show in taskbar"), CGetSetOptions::GetShowInTaskBar(), SETTTING_SHOW_IN_TASKBAR);
 	AddTrueFalse(pGroupTest, _T("Hide taskbar icon when Ditto window closes"), CGetSetOptions::GetHideTaskbarIconOnClose(), SETTING_HIDE_TASKBAR_ICON_ON_CLOSE);
 	AddTrueFalse(pGroupTest, _T("Show indicator a clip has been pasted"), CGetSetOptions::GetShowIfClipWasPasted(), SETTING_SHOW_CLIP_PASTED);
@@ -314,6 +330,9 @@ BOOL CAdvGeneral::OnInitDialog()
 	AddTrueFalse(pGroupTest, _T("Show message that we received a manual sent clip"), CGetSetOptions::GetShowMsgWhenReceivingManualSentClip(), SETTING_SHOW_MSG_WHEN_RECEIVING_MANUAL_SENT_CLIP);	
 
 	AddTrueFalse(pGroupTest, _T("Show startup tooltip message"), CGetSetOptions::GetShowStartupMessage(), SETTING_SHOW_STARTUP_MESSAGE);
+
+	// RW: 2026-03-16 added statusbar
+	AddTrueFalse(pGroupTest, _T("Show status bar"), CGetSetOptions::GetShowStatusBar(), SETTING_SHOW_STATUSBAR);
 
 	AddTrueFalse(pGroupTest, _T("Show text for first ten copy hot keys"), CGetSetOptions::GetShowTextForFirstTenHotKeys(), SETTING_TEXT_FIRST_TEN);
 	AddTrueFalse(pGroupTest, _T("Show thumbnails(for CF_DIB and PNG types) (could increase memory usage and display speed)"), CGetSetOptions::GetDrawThumbnail(), SETTING_DRAW_THUMBNAILS);
@@ -588,6 +607,43 @@ void CAdvGeneral::OnBnClickedOk()
 					CGetSetOptions::SetUseModernScrollBar(val);
 				}
 				break;
+
+			// RW: 2026-03-06 08:47:11 'adaptive' list view icons for dark modes
+			case SETTING_ADAPTIVE_ICONS:
+				if (wcscmp(pNewValue->bstrVal, pOrigValue->bstrVal) != 0)
+				{
+					BOOL val = wcscmp(pNewValue->bstrVal, L"True") == 0;
+					CGetSetOptions::SetShowListIcons(!val ? bit_clear(CGetSetOptions::m_bShowListIcons, 1) : bit_set(CGetSetOptions::m_bShowListIcons, 1));
+				}
+				break;
+
+				// RW: 2026-03-06 08:47:11 optional list view icons
+			case SETTING_SHOW_LVIEW_ICONS:
+				if (wcscmp(pNewValue->bstrVal, pOrigValue->bstrVal) != 0)
+				{
+					BOOL val = wcscmp(pNewValue->bstrVal, L"True") == 0;
+					CGetSetOptions::SetShowListIcons(!val ? bit_clear(CGetSetOptions::m_bShowListIcons, 0) : bit_set(CGetSetOptions::m_bShowListIcons, 0));
+				}
+				break;
+
+				// RW: 2026-03-06 08:47:11 
+			case SETTING_OPENURL_ONDBLCLK:
+				if (wcscmp(pNewValue->bstrVal, pOrigValue->bstrVal) != 0)
+				{
+					BOOL val = wcscmp(pNewValue->bstrVal, L"True") == 0;
+					CGetSetOptions::SetCallUrlByDblClick(val);
+				}
+				break;							
+  		    
+				// RW: 2026-03-16 added statusbar
+			case SETTING_SHOW_STATUSBAR:
+				if (wcscmp(pNewValue->bstrVal, pOrigValue->bstrVal) != 0)
+				{
+					BOOL val = wcscmp(pNewValue->bstrVal, L"True") == 0;
+					CGetSetOptions::SetShowStatusBar(val);
+				}
+				break;
+
 			case SETTING_PASTE_AS_ADMIN:
 				if (wcscmp(pNewValue->bstrVal, pOrigValue->bstrVal) != 0)
 				{
@@ -1146,6 +1202,10 @@ void CAdvGeneral::Search(bool fromSelection)
 					{
 						pSubItem->Show();
 						m_propertyGrid.SetCurSel(pSubItem);
+
+						// RW: 2026-03-30 14:59:33 Sometimes EnsureVisible doesn't work because a line below the scroll position is selected.
+						// this line seems to workaround this?!
+						m_propertyGrid.EnsureVisible(pProp->GetSubItem(m_propertyGrid.GetPropertyCount()-1), FALSE);											
 
 						//calling EnsureVisible mutliple times seemed to show it better otherwise it would randomly not work
 						if (row > 2)

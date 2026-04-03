@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ generated include file.
-// Used by CP_Main.rc
+// Von Microsoft Visual C++ generierte Includedatei.
+// Verwendet durch CP_Main.rc
 //
 #define IDD_ABOUTBOX                    100
 #define IDR_CP_MAIN                     103
@@ -255,6 +255,20 @@
 #define IDR_MENU2                       390
 #define IDR_MENU_DELETE_CLIP_DATA       390
 #define IDR_MENU3                       391
+#define IDB_FOLDER_EMPTY_32             392
+#define IDB_FOLDER_URL_32               393
+#define IDB_FOLDER_IMAGE_32             394
+#define IDB_FOLDER_RTF_32               395
+#define IDB_FOLDER_MAIL_32              396
+#define IDB_FOLDER_FILE_32              397
+#define IDB_FOLDER_EMPTYD_32            398
+#define IDB_FOLDER_URLD_32              399
+#define IDB_FOLDER_IMAGED_32            400
+#define IDB_FOLDER_RTFD_32              401
+#define IDB_FOLDER_MAILD_32             402
+#define IDB_FOLDER_FILED_32             403
+#define IDB_FOLDER_HTML_32              404
+#define IDB_FOLDER_HTMLD_32             405
 #define IDC_PATH                        1000
 #define IDC_GET_PATH                    1001
 #define IDC_SELECT_SOUND                1002
@@ -651,6 +665,14 @@
 #define IDC_EDIT_ACTIVE_APP             2173
 #define IDC_CHECK_DO_NOT_HIDE_ON_DEACTIVATE 2174
 #define IDC_BUTTON_PREVIEW_THEME        2175
+#define IDC_STATIC_SPASTE_INC           2176
+#define IDC_HOTKEY_PASTE_INC            2177
+#define IDC_STATIC_SPASTE_DEC           2178
+#define IDC_HOTKEY_PASTE_DEC 	        2179
+#define IDC_CHECK_HOTKEY_INC            2180
+#define IDC_CHECK_HOTKEY_DEC   		2181
+
+
 #define IDC_EDIT_ADV_FILTER             5001
 #define IDC_NEXT_MATCH_BUTTON           5002
 #define ID_FIRST_OPTION                 32771
@@ -873,15 +895,18 @@
 #define ID_IMPORT_EXPORTTOWEBSEARCH     32997
 #define ID_SPECIALPASTE_PASTENEWGUID    32998
 #define ID_SPECIALPASTE_POSIXIFY_PATHS  32999
+#define ID_MENU_QUICKOPTIONS_SHOWLISTICONS 33000
+#define ID_SPECIALPASTE_PASTE_INC       33001
+#define ID_SPECIALPASTE_PASTE_DEC       33002
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        394
-#define _APS_NEXT_COMMAND_VALUE         32999
-#define _APS_NEXT_CONTROL_VALUE         2174
+#define _APS_NEXT_RESOURCE_VALUE        406
+#define _APS_NEXT_COMMAND_VALUE         33003
+#define _APS_NEXT_CONTROL_VALUE         2182
 #define _APS_NEXT_SYMED_VALUE           104
 #endif
 #endif

@@ -46,6 +46,11 @@ public:
 	CHotKeyCtrl	m_HotKey3;
 	CHotKeyCtrl m_TextOnlyKey;
 	CHotKeyCtrl m_copyAndSaveClipboardCtrl;
+
+	// RW: 2026-03-14
+	CHotKeyCtrl m_pasteAndInc;
+	CHotKeyCtrl m_pasteAndDec;
+
 	//}}AFX_DATA
 
 

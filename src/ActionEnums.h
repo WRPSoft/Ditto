@@ -150,6 +150,10 @@ public:
 		GENERATE_GUID,
 		PASTE_POSIXIFY_PATHS,
 
+		// RW: 2026-03-13 10:20:11 a kind of PowerPaste functionality
+		PASTE_SELECTED_INC,
+		PASTE_SELECTED_DEC,
+
 		LAST_ACTION
 	};
 

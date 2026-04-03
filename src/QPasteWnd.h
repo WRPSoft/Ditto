@@ -115,7 +115,9 @@ public:
     virtual BOOL Create(CRect rect, CWnd *pParentWnd);
     virtual BOOL PreTranslateMessage(MSG *pMsg);
 
-	bool CheckActions(MSG * pMsg);
+	// RW: 2026-02-26 14:54:01 added option: open URL via doubelclick while pressing SHIFT
+	// bool CheckActions(MSG * pMsg);
+	bool CheckActions(MSG* pMsg, bool const skipcheck = false);
 
 	//}}AFX_VIRTUAL
 
@@ -145,6 +147,12 @@ public:
 	CGroupStatic m_alwaysOnToWarningStatic;
 	CGdipButton m_systemMenu;
 	CGroupStatic m_noSearchResultsStatic;
+
+	// RW: 2026-03-16 added statusbar
+	CGroupStatic m_stb;
+	CFont m_stbFont;
+
+	int m_stbRowStart;
 
     long m_lRecordCount;
     bool m_bStopQuery;
@@ -191,6 +199,11 @@ public:
 	BOOL OpenSelection(CSpecialPasteOptions pasteOptions);
     BOOL OpenIndex(int item, bool plainTextOnly = false);
 	BOOL NewGroup(bool bGroupSelection = true, int parentId = -1);
+
+	// RW: 2026-03-06 13:29:14
+	BOOL CheckAndOpenURL(int id);
+	// RW: 2026-03-18 for security reasons, we should avoid CF_HDROP-based clips for power paste
+	BOOL CheckForHDROPClip(int id);
 
     CString LoadDescription(int nItem);
     bool SaveDescription(int nItem, CString text);
@@ -305,6 +318,10 @@ public:
 	bool DoActionSaveCF_HDROP_FileData();
 	bool DoActionToggleClipboardConnection();
 	bool DoActionPasteDontMoveClip();
+
+	// RW: 2026-03-14 special paste (paste and select previous/next entry)
+	bool DoActionPasteSelectedIncDec(bool ainc);
+
 	bool DoSetDragFileName();
 	bool DoActionPasteTrimWhiteSpace();
 	bool DoActionPastePosixifyPaths();
@@ -382,7 +399,8 @@ protected:
     afx_msg void OnFindItem(NMHDR *pNMHDR, LRESULT *pResult);
     afx_msg void OnMenuFirsttenhotkeysUsectrlnum();
     afx_msg void OnMenuFirsttenhotkeysShowhotkeytext();
-    afx_msg void OnMenuQuickoptionsAllwaysshowdescription();
+	afx_msg void OnMenuQuickoptionsShowListIcons();
+	afx_msg void OnMenuQuickoptionsAllwaysshowdescription();
     afx_msg void OnMenuQuickoptionsDoubleclickingoncaptionTogglesalwaysontop();
     afx_msg void OnMenuQuickoptionsDoubleclickingoncaptionRollupwindow();
     afx_msg void OnMenuQuickoptionsDoubleclickingoncaptionTogglesshowdescription();
@@ -566,7 +584,13 @@ public:
 	afx_msg void OnUpdateCliporderMovetolast(CCmdUI *pCmdUI);
 	afx_msg LRESULT OnCopyClip(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnSpecialpastePasteDontUpdateOrder();
-	afx_msg void OnUpdateOnSpecialPasteDontUpdateOrder(CCmdUI *pCmdUI);
+	afx_msg void OnUpdateOnSpecialPasteDontUpdateOrder(CCmdUI* pCmdUI);
+
+	// RW: 2026-03-14 special paste (paste and select previous/next entry)
+	afx_msg void OnSpecialPasteIncSelPos();
+	afx_msg void OnSpecialPasteDecSelPos();
+	afx_msg void OnUpdateOnSpecialPasteIncSelPos(CCmdUI* pCmdUI);
+	afx_msg void OnUpdateOnSpecialPasteDecSelPos(CCmdUI* pCmdUI);
 
 	afx_msg void OnSpecialpasteTrim();
 	afx_msg void OnSpecialpastePosixifyPaths();

@@ -507,7 +507,7 @@ BOOL CToolTipEx::OnMsg(MSG *pMsg)
                 WPARAM vk = pMsg->wParam;
 
 				// RW: 2026-02-12 10:41:14 added imageviewer scaling via keyboard (numpad keys: '-' = zoom_out, '+' = zoom_in, '*' = Scaleimagestofitwindow)
-				// only do this for imageviewer
+				// only do this for imageviewer (means if imageviewer is active and has an image), otherwise we might interfere with other controls
 				if (::IsWindow(m_imageViewer.m_hWnd) && m_imageViewer.m_pGdiplusBitmap) {
 					switch (vk) {
 					case VK_SUBTRACT: // '-'

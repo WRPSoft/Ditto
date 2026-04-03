@@ -47,7 +47,10 @@ public:
     // handles a key's first WM_KEYDOWN or WM_SYSKEYDOWN message.
     // it uses GetKeyState to test for modifiers.
     // returns a pointer to the internal CAccel if it matches the given key or NULL
-    bool OnMsg(MSG *pMsg, CAccel &a);
+	
+	// RW: 2026-02-26 14:54:01 added option open URL via doubelclick while pressing SHIFT
+    // bool OnMsg(MSG *pMsg, CAccel &a);
+	bool OnMsg(MSG* pMsg, CAccel& a, bool const skipcheck = false);
 
 	bool ContainsKey(int vKey);
 

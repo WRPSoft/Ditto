@@ -23,6 +23,10 @@ public:
 	BOOL CloseQPasteWnd();
 	BOOL IsWindowVisibleEx();
 	void MoveSelection(bool down);
+	
+	// RW: 2026-03-14 special paste (paste and select previous/next entry)
+	void PasteAndSelect(bool ainc);
+	
 	void OnKeyStateUp();
 	void SetKeyModiferState(bool bActive);
 	bool IsWindowTopLevel();

@@ -90,6 +90,10 @@ public:
 	CHotKey* m_pSaveClipboard;
 	CHotKey* m_pCopyAndSaveClipboard;
 
+	// RW: 2026-03-14 special paste (paste and select previous/next entry)
+	CHotKey* m_pPasteAndInc;
+	CHotKey* m_pPasteAndDec;
+
 	ExternalWindowTracker m_activeWnd;
 
 	CClipEditThread m_editThread;
@@ -111,6 +115,11 @@ public:
 
 	void OnDeleteID(long lID);
 	BOOL GetClipData(long lID, CClipFormat& Clip);
+
+	// RW: 2026-02-27 09:40:15
+	BOOL GetClipData(long lID, CClipFormat& Clip, std::vector<CLIPFORMAT>& Vektor);
+
+
 	bool EditItems(CClipIDs& Ids, bool bShowError, bool forceTextEdit);
 
 	CClipTypes* LoadTypesFromDB(); // returns a "new" allocated object

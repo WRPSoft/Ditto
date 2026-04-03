@@ -115,11 +115,14 @@ void CModernScrollBar::UpdateScrollBar()
 		scrollSize = m_pDPI->Scale(scrollSize);
 	}
 
+	// RW: 2026-03-16 added statusbar m_stbRowStart 
+	
 	// The list control is clipped by a region to hide the native scrollbar.
 	// searchRowStart is 33 (the height reserved for search bar and options button).
-	int searchRowStart = 33;
+	// plus m_stbRowStart (= 20) if (new) statusbar is enabled
+	int searchRowStart = 33 + m_stbRowStart;
 	if (m_pDPI)
-		searchRowStart = m_pDPI->Scale(33);
+		searchRowStart = m_pDPI->Scale(33 + m_stbRowStart);
 	
 	int visibleBottom = parentClientRect.bottom - searchRowStart;
 

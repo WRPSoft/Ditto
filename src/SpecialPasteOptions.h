@@ -25,6 +25,10 @@ public:
 	bool m_dragDropFilesOnly;
 	CString m_pasteScriptGuid;
 	bool m_updateClipOrder;
+
+	// RW: 2026-03-14 special paste (paste and select previous/next entry)
+	char m_powerPaste;
+
 	bool m_trimWhiteSpace;
 	bool m_PosixifyPaths;
 	bool m_pasteSlugify;

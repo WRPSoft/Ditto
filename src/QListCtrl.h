@@ -127,6 +127,9 @@ public:
 	void SetShowTextForFirstTenHotKeys(BOOL bVal)	{ m_bShowTextForFirstTenHotKeys = bVal;	}
 	void SetShowIfClipWasPasted(BOOL val) { m_showIfClipWasPasted = val; }
 
+	// RW: 2026-03-06 08:47:11 'adaptive' list view icons for dark modes
+	void SetAdaptiveIcons(bool adaptive);
+
 	void DestroyAndCreateAccelerator(BOOL bCreate, CppSQLite3DB &db);
 
 	bool PostEventLoadedCheckDescription(int updatedRow);
@@ -166,6 +169,10 @@ public:
 
 protected:
 	BOOL GetClipData(int nItem, CClipFormat &Clip);
+
+	// RW: 2026-02-27 09:48:41
+	// BOOL GetClipData(int nItem, CClipFormat& Clip, std::vector<CLIPFORMAT>& Vektor);
+
 	BOOL DrawBitMap(int nItem, CRect &crRect, CDC *pDC, const CString &csDescription);
 	void LoadDittoCopyBufferHotkeys();
 	bool MouseInScrollBarArea(CRect crWindow, CPoint point);
@@ -187,6 +194,14 @@ protected:
 	IFormattedTextDraw *m_pFormatter;
 	bool m_allSelected;
 	int m_linesPerRow;
+
+	// RW: 2026-03-16
+	HFONT m_UDLFont;
+
+	// RW: 2026-02-23 14:16:45
+	char m_iconheight;	
+	bool m_adaptive_icons;
+
 	DWORD m_mouseOverScrollAreaStart;
 	bool m_timerToHideScrollAreaSet;
 	CGdiImageDrawer m_groupFolder;
@@ -194,6 +209,16 @@ protected:
 	CGdiImageDrawer m_inFolderImage;
 	CGdiImageDrawer m_shortCutImage;
 	CGdiImageDrawer m_stickyImage;
+
+	// RW: 2026-02-23 14:16:45
+	CGdiImageDrawer m_iconMail;
+	CGdiImageDrawer m_iconUrl;
+	CGdiImageDrawer m_iconText;
+	CGdiImageDrawer m_iconRTF;
+	CGdiImageDrawer m_iconFile;
+	CGdiImageDrawer m_iconImage;
+	CGdiImageDrawer m_iconHTML;
+
 	int m_rowHeight;
 	CString m_searchText;
 	BOOL m_showIfClipWasPasted;
@@ -208,6 +233,10 @@ protected:
 	afx_msg void OnKeydown(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnCustomdrawList(NMHDR* pNMHDR, LRESULT* pResult);
 	void DrawCopiedColorCode(CString& csText, CRect& rcText, CDC* pDC);
+
+	// RW: 2026-03-22
+	void DrawListViewIcons(const int nItem, const BOOL bisURL, const BOOL bisMail, CRect& rcText, CDC* pDC);
+
 	afx_msg void OnSysKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);

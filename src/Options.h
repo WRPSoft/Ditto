@@ -223,6 +223,21 @@ public:
 	static void		SetDescShowLeadingWhiteSpace(BOOL bVal);
 	static BOOL		GetDescShowLeadingWhiteSpace();
 
+	// RW: 2026-02-25 09:09:05
+	static BYTE		m_bShowListIcons;
+	static void		SetShowListIcons(BYTE bShow);
+	static BYTE		GetShowListIcons();
+
+	// RW: 2026-02-25 09:09:05
+	static BOOL		m_bCallUrlByDblClick;
+	static void		SetCallUrlByDblClick(long bCall);
+	static BOOL		GetCallUrlByDblClick();
+
+	// RW: 2026-03-16 added statusbar
+	static BOOL		m_bShowStatusBar;
+	static void		SetShowStatusBar(long bShow);
+	static BOOL		GetShowStatusBar();
+
 	static BOOL		m_bAllwaysShowDescription;
 	static void		SetAllwaysShowDescription(long bShow);
 	static BOOL		GetAllwaysShowDescription();

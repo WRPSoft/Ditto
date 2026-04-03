@@ -55,7 +55,10 @@ void COptionsKeyBoard::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_CHECK_MOVE_CLIPS_ON_PASTE, m_btMoveClipOnGlobal10);
 	DDX_Control(pDX, IDC_HOTKEY_SAVE_CLIPBOARD, m_saveClipboardHotKey);
 	DDX_Control(pDX, IDC_HOTKEY_COPYSAVECLIPBOARD, m_copyAndSaveClipboardCtrl);
-}
+	// RW: 2026-03-14
+	DDX_Control(pDX, IDC_HOTKEY_PASTE_INC, m_pasteAndInc);
+	DDX_Control(pDX, IDC_HOTKEY_PASTE_DEC, m_pasteAndDec);
+}	
 
 BEGIN_MESSAGE_MAP(COptionsKeyBoard, CPropertyPage)
 	//{{AFX_MSG_MAP(COptionsKeyBoard)
@@ -91,6 +94,9 @@ BOOL COptionsKeyBoard::OnInitDialog()
 	theApp.m_pSaveClipboard->CopyToCtrl(m_saveClipboardHotKey, m_hWnd, IDC_CHECK_WIN_SAVE_CLIPBOARD);
 	theApp.m_pCopyAndSaveClipboard->CopyToCtrl(m_copyAndSaveClipboardCtrl, m_hWnd, IDC_CHECK_WIN_COPY_SAVE_CLIPBOARD);
 
+	// RW: 2026-03-14 special paste (paste and select previous/next entry)
+	theApp.m_pPasteAndInc->CopyToCtrl(m_pasteAndInc, m_hWnd, IDC_CHECK_HOTKEY_INC);
+	theApp.m_pPasteAndDec->CopyToCtrl(m_pasteAndDec, m_hWnd, IDC_CHECK_HOTKEY_DEC);
 
 	//Unregister hotkeys and Reregister them on cancel or ok
 	g_HotKeys.UnregisterAll();
@@ -146,6 +152,10 @@ BOOL COptionsKeyBoard::OnApply()
 	theApp.m_pTextOnlyPaste->CopyFromCtrl(m_TextOnlyKey, m_hWnd, IDC_CHECK_WIN_TEXT_ONLY);
 	theApp.m_pSaveClipboard->CopyFromCtrl(m_saveClipboardHotKey, m_hWnd, IDC_CHECK_WIN_SAVE_CLIPBOARD);
 	theApp.m_pCopyAndSaveClipboard->CopyFromCtrl(m_copyAndSaveClipboardCtrl, m_hWnd, IDC_CHECK_WIN_COPY_SAVE_CLIPBOARD);
+
+	// RW: 2026-03-14 special paste (paste and select previous/next entry)
+	theApp.m_pPasteAndInc->CopyFromCtrl(m_pasteAndInc, m_hWnd, IDC_CHECK_HOTKEY_INC);
+	theApp.m_pPasteAndDec->CopyFromCtrl(m_pasteAndDec, m_hWnd, IDC_CHECK_HOTKEY_DEC);
 
 	ARRAY NewKeys;
 	g_HotKeys.GetKeys(NewKeys);

@@ -29,6 +29,10 @@ CSpecialPasteOptions::CSpecialPasteOptions()
 	m_pasteImagesVertically = false;
 	m_pasteAsciiOnly = false;
 	m_pasteGuid = false;
+
+	// RW: 2026-03-14 special paste (paste and select previous/next entry)
+	m_powerPaste = 0;
+
 }
 
 CSpecialPasteOptions::~CSpecialPasteOptions()

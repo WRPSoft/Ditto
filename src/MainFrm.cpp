@@ -457,6 +457,20 @@ LRESULT CMainFrame::OnHotKey(WPARAM wParam, LPARAM lParam)
 
 		Log(StrF(_T("END of copy and save clipboard")));
 	}
+
+	// RW: 2026-03-14 special paste (paste and select previous/next entry)
+	else if (theApp.m_pPasteAndInc && wParam == theApp.m_pPasteAndInc->m_Atom)
+	{
+		Log(_T("PasteAndInc hot key"));
+		m_quickPaste.PasteAndSelect(true);		
+	}
+	// RW: 2026-03-14 special paste (paste and select previous/next entry)
+	else if (theApp.m_pPasteAndDec && wParam == theApp.m_pPasteAndDec->m_Atom)
+	{
+		Log(_T("PasteAndDec hot key"));		
+		m_quickPaste.PasteAndSelect(false);
+	}
+
 	else
 	{
 		for(int i = 0; i < g_HotKeys.GetCount(); i++)

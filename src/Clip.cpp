@@ -588,7 +588,7 @@ int CClip::LoadFromClipboard(CClipTypes* pClipTypes, bool checkClipboardIgnore, 
 
 	// RW: 2026-03-01 12:24:09 maybe better handle this at ChaiScript level, so user can decide if they want to call on copy scripts on duplicates or not
 	// An if-clause before the loop to prevent entering the for-loop would also be a way to prevent duplicates, if we want to hide this from the user
-	bool isdupl = FALSE;
+	bool isdupl;
 	if (!CGetSetOptions::GetAllowDuplicates() && m_parentId < 0)
 	{
 		m_CRC = GenerateCRC();

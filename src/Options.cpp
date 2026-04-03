@@ -35,6 +35,12 @@ BOOL CGetSetOptions::m_bHideDittoOnPaste;
 long CGetSetOptions::m_bDescTextSize;
 BOOL CGetSetOptions::m_bDescShowLeadingWhiteSpace;
 BOOL CGetSetOptions::m_bAllwaysShowDescription;
+
+// RW: 2026-02-25 09:09:05 listview icons, call url by double click, show status bar
+BYTE CGetSetOptions::m_bShowListIcons;
+BOOL CGetSetOptions::m_bCallUrlByDblClick;
+BOOL CGetSetOptions::m_bShowStatusBar;
+
 long CGetSetOptions::m_bDoubleClickingOnCaptionDoes;
 BOOL CGetSetOptions::m_bPrompForNewGroupName;
 BOOL CGetSetOptions::m_bSendPasteOnFirstTenHotKeys;
@@ -263,6 +269,12 @@ void CGetSetOptions::LoadSettings()
 	m_bDescTextSize = GetDescTextSize();
 	m_bDescShowLeadingWhiteSpace = GetDescShowLeadingWhiteSpace();
 	m_bAllwaysShowDescription = GetAllwaysShowDescription();
+	
+	// RW: 2026-02-25 09:09:05 listview icons, call url by double click, show status bar
+	m_bShowListIcons = GetShowListIcons();
+	m_bCallUrlByDblClick = GetCallUrlByDblClick();
+	m_bShowStatusBar = GetShowStatusBar();
+	
 	m_bDoubleClickingOnCaptionDoes = GetDoubleClickingOnCaptionDoes();
 	m_bPrompForNewGroupName = GetPrompForNewGroupName();
 	m_bSendPasteOnFirstTenHotKeys = GetSendPasteOnFirstTenHotKeys();
@@ -401,6 +413,12 @@ void CGetSetOptions::ConverSettingsToIni()
 	SetDescTextSize(GetDescTextSize());
 	SetDescShowLeadingWhiteSpace(GetDescShowLeadingWhiteSpace());
 	SetAllwaysShowDescription(GetAllwaysShowDescription());
+	
+	// RW: 2026-02-25 09:09:05 listview icons, call url by double click, show status bar
+	SetShowListIcons(GetShowListIcons());
+	SetShowStatusBar(GetShowStatusBar());
+	SetCallUrlByDblClick(GetCallUrlByDblClick());
+	
 	SetDoubleClickingOnCaptionDoes(GetDoubleClickingOnCaptionDoes());
 	SetPrompForNewGroupName(GetPrompForNewGroupName());
 	SetSendPasteOnFirstTenHotKeys(GetSendPasteOnFirstTenHotKeys());
@@ -1335,7 +1353,47 @@ BOOL CGetSetOptions::GetDescShowLeadingWhiteSpace()
 	return GetProfileLong("DescShowLeadingWhiteSpace", FALSE); 
 }
 
-void CGetSetOptions::SetAllwaysShowDescription(long bShow)	
+// RW: 2026-02-25 09:09:05
+void CGetSetOptions::SetShowListIcons(BYTE bShow)
+{
+	SetProfileLong("ShowListIcons", bShow);
+	m_bShowListIcons = bShow;
+}
+
+// RW: 2026-02-25 09:09:05
+BYTE CGetSetOptions::GetShowListIcons()
+{
+	// bit 1 = show icons and bit 2 = adaptive style are the default settings
+	return GetProfileLong("ShowListIcons", 3);
+}
+
+// RW: 2026-02-25 09:09:05
+void CGetSetOptions::SetCallUrlByDblClick(long bCall)
+{
+	SetProfileLong("CallURLDbClick", bCall);
+	m_bCallUrlByDblClick = bCall;
+}
+
+// RW: 2026-02-25 09:09:05
+BOOL CGetSetOptions::GetCallUrlByDblClick()
+{
+	return GetProfileLong("CallURLDbClick", FALSE);
+}
+
+// RW: 2026-03-16 added statusbar
+void CGetSetOptions::SetShowStatusBar(long bShow)
+{
+	SetProfileLong("ShowStatusBar", bShow);
+	m_bShowStatusBar = bShow;
+}
+
+// RW: 2026-03-16 added statusbar
+BOOL CGetSetOptions::GetShowStatusBar()
+{
+	return GetProfileLong("ShowStatusBar", FALSE); 
+}
+
+void CGetSetOptions::SetAllwaysShowDescription(long bShow)
 {	
 	SetProfileLong("AllwaysShowDescription", bShow); 
 	m_bAllwaysShowDescription = bShow; 

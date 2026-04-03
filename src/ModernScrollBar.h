@@ -48,6 +48,10 @@ public:
 	// Get orientation
 	ScrollBarOrientation GetOrientation() const { return m_orientation; }
 
+	inline void SetStbRowStart(int rowStart) { 
+		m_stbRowStart = rowStart; 
+	}
+
 protected:
 	DECLARE_MESSAGE_MAP()
 	
@@ -96,4 +100,7 @@ private:
 	
 	// Timer
 	enum { TIMER_AUTO_HIDE = 1 };
+
+	// RW: 2026-03-16 added optional statusbar
+	int m_stbRowStart;
 };
